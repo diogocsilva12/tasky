@@ -43,15 +43,18 @@ export function ColumnModal({
 }: ColumnModalProps) {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState('#3b82f6');
+  const [wipLimit, setWipLimit] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (columnToEdit) {
       setTitle(columnToEdit.title);
       setColor(columnToEdit.color || '#3b82f6');
+      setWipLimit(columnToEdit.wipLimit !== undefined ? String(columnToEdit.wipLimit) : '');
     } else {
       setTitle('');
       setColor('#3b82f6');
+      setWipLimit('');
     }
     setError('');
   }, [columnToEdit, open]);
@@ -63,15 +66,20 @@ export function ColumnModal({
       return;
     }
 
+    const parsedWip = wipLimit.trim() ? parseInt(wipLimit.trim(), 10) : undefined;
+    const wipLimitVal = parsedWip && parsedWip > 0 ? parsedWip : undefined;
+
     if (columnToEdit) {
       boardStore.updateColumn(projectId, columnToEdit.id, {
         title: title.trim(),
         color,
+        wipLimit: wipLimitVal,
       });
     } else {
       boardStore.addColumn(projectId, {
         title: title.trim(),
         color,
+        wipLimit: wipLimitVal,
       });
     }
 
@@ -144,6 +152,28 @@ export function ColumnModal({
                 style={{ backgroundColor: color }}
               />
             </div>
+          </div>
+
+          {/* Work in Progress (WIP) Limit */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground">
+                Work In Progress (WIP) Limit
+              </label>
+              <span className="text-[11px] text-muted-foreground">Optional</span>
+            </div>
+            <Input
+              type="number"
+              min="1"
+              max="99"
+              placeholder="e.g. 4 (Leave empty for no limit)"
+              value={wipLimit}
+              onChange={(e) => setWipLimit(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Displays a warning badge on the board when this column exceeds the limit.
+            </p>
           </div>
 
           <DialogFooter className="pt-2">

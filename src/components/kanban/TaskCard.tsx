@@ -28,6 +28,9 @@ import {
   GripVertical,
   Ban,
   AlertCircle,
+  CheckSquare,
+  Calendar,
+  Tag,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -93,6 +96,17 @@ export function TaskCard({
     return username.slice(0, 2).toUpperCase();
   };
 
+  const subtasks = task.subtasks || [];
+  const completedSubtasks = subtasks.filter((s) => s.completed).length;
+  const totalSubtasks = subtasks.length;
+
+  const isOverdue = task.dueDate
+    ? new Date(task.dueDate + 'T23:59:59').getTime() < Date.now()
+    : false;
+  const isDueToday = task.dueDate
+    ? new Date(task.dueDate + 'T23:59:59').toDateString() === new Date().toDateString()
+    : false;
+
   return (
     <>
       <div
@@ -111,13 +125,23 @@ export function TaskCard({
         }`}
         onClick={() => onEdit?.(task)}
       >
-        {/* Top row: Priority badge, Blocked badge, Branch tag / Issue #, Dropdown */}
+        {/* Top row: Priority badge, Blocked badge, Story Points, Branch tag / Issue #, Dropdown */}
         <div className="flex items-center justify-between gap-1.5 pb-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Priority Badge */}
             <Badge variant={priorityInfo.badgeVariant} className="text-[10px] px-2 py-0.5">
               {priorityInfo.label}
             </Badge>
+
+            {/* Story Points */}
+            {task.storyPoints !== undefined && (
+              <span
+                className="inline-flex items-center text-[10px] font-mono font-medium px-1.5 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary"
+                title={`${task.storyPoints} Story Points`}
+              >
+                {task.storyPoints} pts
+              </span>
+            )}
 
             {/* Blocked Badge */}
             {task.isBlocked && (
@@ -240,7 +264,45 @@ export function TaskCard({
           </div>
         )}
 
-        {/* Bottom row: Branch Link & Assignee Avatars */}
+        {/* Tags */}
+        {task.tags && task.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {task.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-secondary/80 text-secondary-foreground border border-border/50"
+              >
+                <Tag className="h-2 w-2 opacity-60" />
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Subtasks Progress */}
+        {totalSubtasks > 0 && (
+          <div className="mt-2.5 space-y-1 rounded-md bg-muted/40 p-1.5 border border-border/40">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1 font-medium">
+                <CheckSquare className="h-3 w-3 text-primary" />
+                <span>Subtasks</span>
+              </span>
+              <span className="font-mono text-[9px] font-semibold">
+                {completedSubtasks}/{totalSubtasks}
+              </span>
+            </div>
+            <div className="w-full bg-secondary/80 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-primary h-full transition-all duration-300"
+                style={{
+                  width: `${Math.round((completedSubtasks / totalSubtasks) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Bottom row: Branch Link, Due Date & Assignee Avatars */}
         <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-border/40">
           {/* Branch Link */}
           {task.branchName ? (
@@ -251,7 +313,7 @@ export function TaskCard({
                   window.open(branchUrl, '_blank', 'noopener,noreferrer');
                 }
               }}
-              className={`inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground truncate max-w-[130px] sm:max-w-[150px] ${
+              className={`inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground truncate max-w-[120px] ${
                 branchUrl ? 'hover:text-primary cursor-pointer' : ''
               }`}
               title={task.branchName}
@@ -261,6 +323,23 @@ export function TaskCard({
             </span>
           ) : (
             <span />
+          )}
+
+          {/* Due Date Badge */}
+          {task.dueDate && (
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border shrink-0 ${
+                isOverdue
+                  ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 font-semibold'
+                  : isDueToday
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-semibold'
+                  : 'bg-muted/70 text-muted-foreground border-border/50'
+              }`}
+              title={isOverdue ? 'Overdue' : isDueToday ? 'Due today' : `Due: ${task.dueDate}`}
+            >
+              <Calendar className="h-2.5 w-2.5" />
+              <span>{task.dueDate}</span>
+            </span>
           )}
 
           {/* Assignees Avatars */}

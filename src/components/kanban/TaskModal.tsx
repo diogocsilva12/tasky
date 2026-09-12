@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { boardStore } from '@/store/boardStore';
-import type { Task, Priority, Column, Assignee } from '@/types';
+import type { Task, Priority, Column, Assignee, Subtask } from '@/types';
 import {
   CheckSquare,
   GitBranch,
@@ -25,6 +25,11 @@ import {
   User,
   Flame,
   Ban,
+  Calendar,
+  Tag,
+  Plus,
+  Trash2,
+  ListTodo,
 } from 'lucide-react';
 
 interface TaskModalProps {
@@ -99,6 +104,11 @@ export function TaskModal({
   const [branchName, setBranchName] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockerReason, setBlockerReason] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [storyPoints, setStoryPoints] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -116,6 +126,10 @@ export function TaskModal({
         taskToEdit.githubIssueNumber !== undefined ? String(taskToEdit.githubIssueNumber) : ''
       );
       setBranchName(taskToEdit.branchName || '');
+      setDueDate(taskToEdit.dueDate || '');
+      setStoryPoints(taskToEdit.storyPoints !== undefined ? String(taskToEdit.storyPoints) : '');
+      setTagsInput((taskToEdit.tags || []).join(', '));
+      setSubtasks(taskToEdit.subtasks ? [...taskToEdit.subtasks] : []);
     } else {
       setTitle('');
       setDescription('');
@@ -126,7 +140,12 @@ export function TaskModal({
       setAssigneesInput('');
       setIssueNumber('');
       setBranchName(defaultBranch || '');
+      setDueDate('');
+      setStoryPoints('');
+      setTagsInput('');
+      setSubtasks([]);
     }
+    setNewSubtaskTitle('');
     setError('');
   }, [taskToEdit, defaultColumnId, defaultBranch, columns, open]);
 
@@ -139,6 +158,32 @@ export function TaskModal({
         username,
         avatarUrl: `https://github.com/${username}.png`,
       }));
+  };
+
+  const handleAddSubtask = () => {
+    const trimmed = newSubtaskTitle.trim();
+    if (!trimmed) return;
+    setSubtasks([
+      ...subtasks,
+      {
+        id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        title: trimmed,
+        completed: false,
+      },
+    ]);
+    setNewSubtaskTitle('');
+  };
+
+  const handleToggleSubtask = (subtaskId: string) => {
+    setSubtasks(
+      subtasks.map((st) =>
+        st.id === subtaskId ? { ...st, completed: !st.completed } : st
+      )
+    );
+  };
+
+  const handleRemoveSubtask = (subtaskId: string) => {
+    setSubtasks(subtasks.filter((st) => st.id !== subtaskId));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -156,6 +201,11 @@ export function TaskModal({
 
     const assignees = parseAssignees(assigneesInput);
     const parsedIssue = issueNumber.trim() ? parseInt(issueNumber.trim(), 10) : undefined;
+    const parsedStoryPoints = storyPoints.trim() ? parseInt(storyPoints.trim(), 10) : undefined;
+    const tags = tagsInput
+      .split(',')
+      .map((s) => s.trim().replace(/^#/, ''))
+      .filter(Boolean);
 
     const taskPayload = {
       title: title.trim(),
@@ -167,6 +217,10 @@ export function TaskModal({
       branchName: branchName.trim() || undefined,
       isBlocked,
       blockerReason: isBlocked ? (blockerReason.trim() || undefined) : undefined,
+      subtasks,
+      tags: tags.length > 0 ? tags : undefined,
+      dueDate: dueDate || undefined,
+      storyPoints: isNaN(parsedStoryPoints as number) ? undefined : parsedStoryPoints,
     };
 
     if (taskToEdit) {
@@ -322,6 +376,130 @@ export function TaskModal({
                 onChange={(e) => setBranchName(e.target.value)}
                 className="text-xs"
               />
+            </div>
+          </div>
+
+          {/* Due Date & Story Points */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                Due Date
+              </label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                Story Points
+              </label>
+              <Select
+                value={storyPoints || 'none'}
+                onValueChange={(val) => setStoryPoints(val === 'none' ? '' : val)}
+              >
+                <SelectTrigger className="w-full text-xs">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">None</SelectItem>
+                  <SelectItem value="1" className="text-xs">1 pt (Tiny)</SelectItem>
+                  <SelectItem value="2" className="text-xs">2 pts (Small)</SelectItem>
+                  <SelectItem value="3" className="text-xs">3 pts (Medium)</SelectItem>
+                  <SelectItem value="5" className="text-xs">5 pts (Large)</SelectItem>
+                  <SelectItem value="8" className="text-xs">8 pts (Complex)</SelectItem>
+                  <SelectItem value="13" className="text-xs">13 pts (Epic)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+              Tags & Labels
+            </label>
+            <Input
+              placeholder="e.g. frontend, auth, bug, performance (comma-separated)"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              className="text-xs"
+            />
+          </div>
+
+          {/* Subtasks / Checklist */}
+          <div className="space-y-2 rounded-xl border border-border/70 bg-card/60 p-3 backdrop-blur-xs">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <ListTodo className="h-4 w-4 text-primary" />
+                <span>Checklist / Subtasks</span>
+              </label>
+              <span className="text-[11px] text-muted-foreground">
+                {subtasks.filter((s) => s.completed).length}/{subtasks.length} completed
+              </span>
+            </div>
+
+            {/* Existing subtasks list */}
+            {subtasks.length > 0 && (
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {subtasks.map((st) => (
+                  <div
+                    key={st.id}
+                    className="flex items-center justify-between gap-2 p-1.5 rounded-lg border border-border/50 bg-background/70 text-xs"
+                  >
+                    <label className="flex items-center gap-2 flex-1 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={st.completed}
+                        onChange={() => handleToggleSubtask(st.id)}
+                        className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer shrink-0"
+                      />
+                      <span className={`${st.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                        {st.title}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSubtask(st.id)}
+                      className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors cursor-pointer"
+                      title="Delete subtask"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new subtask row */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add subtask or checklist item..."
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddSubtask();
+                  }
+                }}
+                className="h-8 text-xs"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddSubtask}
+                disabled={!newSubtaskTitle.trim()}
+                className="h-8 text-xs gap-1 shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add</span>
+              </Button>
             </div>
           </div>
 

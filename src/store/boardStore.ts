@@ -78,6 +78,14 @@ export const INITIAL_TASKS: Task[] = [
     githubIssueNumber: 2,
     branchName: 'feature/auth-admin',
     githubUrl: 'https://github.com/diogocsilva12/tasky/issues/2',
+    tags: ['security', 'auth', 'core'],
+    dueDate: '2026-09-18',
+    storyPoints: 5,
+    subtasks: [
+      { id: 'st-1', title: 'Validate Personal Access Token scopes', completed: true },
+      { id: 'st-2', title: 'Implement AES-GCM encryption', completed: true },
+      { id: 'st-3', title: 'Sync pass-list with GitHub Gist', completed: true },
+    ],
     createdAt: '2026-09-08T09:00:00.000Z',
     updatedAt: '2026-09-12T11:20:00.000Z',
   },
@@ -94,6 +102,14 @@ export const INITIAL_TASKS: Task[] = [
     githubIssueNumber: 5,
     branchName: 'feature/kanban-board',
     githubUrl: 'https://github.com/diogocsilva12/tasky/issues/5',
+    tags: ['dnd', 'ui', 'performance'],
+    dueDate: '2026-09-22',
+    storyPoints: 8,
+    subtasks: [
+      { id: 'st-4', title: 'Configure DndContext with closestCorners', completed: true },
+      { id: 'st-5', title: 'Support vertical card reordering', completed: true },
+      { id: 'st-6', title: 'Implement horizontal column reordering', completed: false },
+    ],
     createdAt: '2026-09-08T11:00:00.000Z',
     updatedAt: '2026-09-12T12:00:00.000Z',
   },
@@ -638,6 +654,54 @@ export const boardStore = {
     emitChange();
   },
 
+  toggleSubtask(taskId: string, subtaskId: string): void {
+    const now = new Date().toISOString();
+    currentState = {
+      ...currentState,
+      tasks: currentState.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const subtasks = (t.subtasks || []).map((st) =>
+          st.id === subtaskId ? { ...st, completed: !st.completed } : st
+        );
+        return { ...t, subtasks, updatedAt: now };
+      }),
+    };
+    emitChange();
+  },
+
+  addSubtask(taskId: string, title: string): void {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const now = new Date().toISOString();
+    const newSubtask = {
+      id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title: trimmed,
+      completed: false,
+    };
+    currentState = {
+      ...currentState,
+      tasks: currentState.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const subtasks = [...(t.subtasks || []), newSubtask];
+        return { ...t, subtasks, updatedAt: now };
+      }),
+    };
+    emitChange();
+  },
+
+  removeSubtask(taskId: string, subtaskId: string): void {
+    const now = new Date().toISOString();
+    currentState = {
+      ...currentState,
+      tasks: currentState.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const subtasks = (t.subtasks || []).filter((st) => st.id !== subtaskId);
+        return { ...t, subtasks, updatedAt: now };
+      }),
+    };
+    emitChange();
+  },
+
   moveTask(taskId: string, targetColumnId: string, targetIndex?: number): void {
     const task = currentState.tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -744,8 +808,9 @@ export function getFilteredTasks(
       const matchAssignee = task.assignees.some(
         (a) => a.username.toLowerCase().includes(q) || a.name?.toLowerCase().includes(q)
       );
+      const matchTags = task.tags?.some((t) => t.toLowerCase().includes(q)) || false;
 
-      if (!matchTitle && !matchDesc && !matchBranch && !matchIssue && !matchAssignee) {
+      if (!matchTitle && !matchDesc && !matchBranch && !matchIssue && !matchAssignee && !matchTags) {
         return false;
       }
     }
@@ -761,6 +826,12 @@ export function getFilteredTasks(
         (a) => a.username.toLowerCase() === filter.assignee.toLowerCase()
       );
       if (!matchAssignee) return false;
+    }
+
+    // Tag filter
+    if (filter.tag && filter.tag !== 'ALL') {
+      const matchTag = task.tags?.some((t) => t.toLowerCase() === filter.tag!.toLowerCase());
+      if (!matchTag) return false;
     }
 
     // Blocker filter
@@ -801,12 +872,18 @@ export function useBoardStore() {
     ).values()
   );
 
+  // Extract all distinct tags in the active project for filter dropdown
+  const projectTags = Array.from(
+    new Set(activeProjectTasks.flatMap((t) => t.tags || []))
+  );
+
   return {
     ...state,
     activeProject,
     activeProjectTasks,
     filteredTasks,
     projectAssignees,
+    projectTags,
     addProject: boardStore.addProject,
     updateProject: boardStore.updateProject,
     deleteProject: boardStore.deleteProject,
@@ -818,6 +895,9 @@ export function useBoardStore() {
     addTask: boardStore.addTask,
     updateTask: boardStore.updateTask,
     deleteTask: boardStore.deleteTask,
+    toggleSubtask: boardStore.toggleSubtask,
+    addSubtask: boardStore.addSubtask,
+    removeSubtask: boardStore.removeSubtask,
     moveTask: boardStore.moveTask,
     reorderTasks: boardStore.reorderTasks,
     setFilter: boardStore.setFilter,

@@ -23,6 +23,7 @@ import {
   Edit2,
   Trash2,
   GripVertical,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface KanbanColumnProps {
@@ -115,10 +116,31 @@ export function KanbanColumn({
               {column.title}
             </h2>
 
-            {/* Task Count Badge */}
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-mono font-medium text-muted-foreground">
-              {tasks.length}
+            {/* Task Count & WIP Limit Badge */}
+            <span
+              className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-mono font-medium ${
+                column.wipLimit && tasks.length > column.wipLimit
+                  ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/40 font-bold animate-pulse'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+              title={
+                column.wipLimit
+                  ? `${tasks.length} / ${column.wipLimit} cards (WIP limit: ${column.wipLimit})`
+                  : `${tasks.length} tasks`
+              }
+            >
+              {column.wipLimit ? `${tasks.length}/${column.wipLimit}` : tasks.length}
             </span>
+
+            {/* Total Story Points in column */}
+            {tasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0) > 0 && (
+              <span
+                className="hidden xl:inline-flex text-[10px] font-mono text-muted-foreground/70"
+                title="Total Story Points in this column"
+              >
+                {tasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0)}pts
+              </span>
+            )}
           </div>
 
           {/* Action buttons: + Add Task, More Options */}
@@ -168,6 +190,14 @@ export function KanbanColumn({
             </DropdownMenu>
           </div>
         </div>
+
+        {/* WIP Limit Alert Banner */}
+        {column.wipLimit && tasks.length > column.wipLimit && (
+          <div className="mx-3 mt-2 flex items-center gap-1.5 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>WIP Limit Exceeded (+{tasks.length - column.wipLimit})</span>
+          </div>
+        )}
 
         {/* Task List (Droppable area) */}
         <div className="flex-1 px-2.5 py-2.5 space-y-2.5 min-h-[300px] overflow-y-auto max-h-[calc(100vh-250px)]">

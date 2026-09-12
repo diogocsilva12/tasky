@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, X, User, RotateCcw, Ban } from 'lucide-react';
+import { Search, X, User, RotateCcw, Ban, Tag } from 'lucide-react';
 
 const PRIORITIES: { id: Priority | 'ALL'; label: string; dotColor: string }[] = [
   { id: 'ALL', label: 'All', dotColor: 'bg-muted-foreground' },
@@ -20,13 +20,20 @@ const PRIORITIES: { id: Priority | 'ALL'; label: string; dotColor: string }[] = 
 ];
 
 export function BoardFilters() {
-  const { filter, setFilter, resetFilter, activeProjectTasks, projectAssignees } =
-    useBoardStore();
+  const {
+    filter,
+    setFilter,
+    resetFilter,
+    activeProjectTasks,
+    projectAssignees,
+    projectTags,
+  } = useBoardStore();
 
   const hasActiveFilters =
     filter.searchQuery.trim() !== '' ||
     filter.priority !== 'ALL' ||
     filter.assignee !== 'ALL' ||
+    (filter.tag && filter.tag !== 'ALL') ||
     Boolean(filter.onlyBlocked);
 
   // Calculate count per priority for current project tasks
@@ -137,6 +144,49 @@ export function BoardFilters() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Tag Filter Dropdown */}
+        {projectTags.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`h-7 px-2.5 text-xs gap-1.5 border-border/70 ${
+                  filter.tag && filter.tag !== 'ALL'
+                    ? 'border-primary text-primary bg-primary/5'
+                    : ''
+                }`}
+              >
+                <Tag className="h-3 w-3" />
+                <span className="max-w-[100px] truncate">
+                  {!filter.tag || filter.tag === 'ALL' ? 'Tag' : `#${filter.tag}`}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                onClick={() => setFilter({ tag: 'ALL' })}
+                className={`text-xs cursor-pointer ${
+                  !filter.tag || filter.tag === 'ALL' ? 'font-semibold text-primary' : ''
+                }`}
+              >
+                All Tags
+              </DropdownMenuItem>
+              {projectTags.map((tag) => (
+                <DropdownMenuItem
+                  key={tag}
+                  onClick={() => setFilter({ tag })}
+                  className={`text-xs cursor-pointer ${
+                    filter.tag === tag ? 'font-semibold text-primary' : ''
+                  }`}
+                >
+                  #{tag}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Reset button when filters are active */}
         {hasActiveFilters && (

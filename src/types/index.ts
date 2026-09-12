@@ -6,6 +6,12 @@ export interface Assignee {
   avatarUrl?: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   projectId: string;
@@ -20,6 +26,10 @@ export interface Task {
   branchName?: string;
   isBlocked?: boolean;
   blockerReason?: string;
+  subtasks?: Subtask[];
+  tags?: string[];
+  dueDate?: string;
+  storyPoints?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +39,7 @@ export interface Column {
   title: string;
   color?: string;
   order: number;
+  wipLimit?: number;
 }
 
 export type ProjectVisibility = 'public' | 'private';
@@ -55,6 +66,7 @@ export interface BoardFilter {
   searchQuery: string;
   priority: Priority | 'ALL';
   assignee: string | 'ALL';
+  tag?: string | 'ALL';
   onlyBlocked?: boolean;
 }
 
