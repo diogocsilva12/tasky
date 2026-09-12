@@ -35,6 +35,7 @@ import {
   GitPullRequest,
   GitMerge,
   Milestone,
+  MessageSquare,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -395,6 +396,21 @@ export function TaskCard({
             >
               <Calendar className="h-2.5 w-2.5" />
               <span>{task.dueDate}</span>
+            </span>
+          )}
+
+          {/* Comments Count Badge */}
+          {task.comments && task.comments.length > 0 && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(task);
+              }}
+              title={`${task.comments.length} comment${task.comments.length > 1 ? 's' : ''}`}
+            >
+              <MessageSquare className="h-2.5 w-2.5" />
+              <span>{task.comments.length}</span>
             </span>
           )}
 

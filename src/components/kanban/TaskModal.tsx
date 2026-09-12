@@ -16,8 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/context/AuthContext';
 import { boardStore } from '@/store/boardStore';
-import type { Task, Priority, Column, Assignee, Subtask, PrStatus } from '@/types';
+import type { Task, Priority, Column, Assignee, Subtask, PrStatus, TaskComment } from '@/types';
 import {
   CheckSquare,
   GitBranch,
@@ -33,6 +35,8 @@ import {
   GitPullRequest,
   GitMerge,
   Milestone,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
 
 interface TaskModalProps {
@@ -98,6 +102,7 @@ export function TaskModal({
   defaultColumnId,
   defaultBranch,
 }: TaskModalProps) {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [columnId, setColumnId] = useState('');
@@ -115,6 +120,8 @@ export function TaskModal({
   const [tagsInput, setTagsInput] = useState('');
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [newCommentText, setNewCommentText] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -141,6 +148,7 @@ export function TaskModal({
       setStoryPoints(taskToEdit.storyPoints !== undefined ? String(taskToEdit.storyPoints) : '');
       setTagsInput((taskToEdit.tags || []).join(', '));
       setSubtasks(taskToEdit.subtasks ? [...taskToEdit.subtasks] : []);
+      setComments(taskToEdit.comments ? [...taskToEdit.comments] : []);
     } else {
       setTitle('');
       setDescription('');
@@ -158,8 +166,10 @@ export function TaskModal({
       setStoryPoints('');
       setTagsInput('');
       setSubtasks([]);
+      setComments([]);
     }
     setNewSubtaskTitle('');
+    setNewCommentText('');
     setError('');
   }, [taskToEdit, defaultColumnId, defaultBranch, columns, open]);
 
@@ -198,6 +208,33 @@ export function TaskModal({
 
   const handleRemoveSubtask = (subtaskId: string) => {
     setSubtasks(subtasks.filter((st) => st.id !== subtaskId));
+  };
+
+  const handleAddComment = () => {
+    const trimmed = newCommentText.trim();
+    if (!trimmed) return;
+    const author = user?.username || 'diogocsilva12';
+    const avatarUrl = user?.avatarUrl || `https://github.com/${author}.png`;
+    const newC: TaskComment = {
+      id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      author,
+      avatarUrl,
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...comments, newC];
+    setComments(updated);
+    if (taskToEdit) {
+      boardStore.addComment(taskToEdit.id, trimmed, author, avatarUrl);
+    }
+    setNewCommentText('');
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setComments(comments.filter((c) => c.id !== commentId));
+    if (taskToEdit) {
+      boardStore.deleteComment(taskToEdit.id, commentId);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -240,6 +277,7 @@ export function TaskModal({
       tags: tags.length > 0 ? tags : undefined,
       dueDate: dueDate || undefined,
       storyPoints: isNaN(parsedStoryPoints as number) ? undefined : parsedStoryPoints,
+      comments: comments.length > 0 ? comments : undefined,
     };
 
     if (taskToEdit) {
@@ -609,6 +647,95 @@ export function TaskModal({
                 />
               </div>
             )}
+          </div>
+
+          {/* Discussion & Activity Thread */}
+          <div className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-3.5 backdrop-blur-xs">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                <span>Discussion & Comments</span>
+              </label>
+              <span className="text-[11px] text-muted-foreground">
+                {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+              </span>
+            </div>
+
+            {/* Comments List */}
+            {comments.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="p-2.5 rounded-lg border border-border/60 bg-background/80 space-y-1 text-xs"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5 border border-border">
+                          <AvatarImage src={comment.avatarUrl} alt={comment.author} />
+                          <AvatarFallback className="text-[8px] font-bold">
+                            {comment.author.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-semibold text-foreground text-[11px]">
+                          @{comment.author}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(comment.createdAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-muted-foreground hover:text-destructive p-0.5 rounded transition-colors cursor-pointer"
+                        title="Delete comment"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed pl-7">
+                      {comment.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic py-0.5">
+                No comments yet. Start a discussion on this task.
+              </p>
+            )}
+
+            {/* Add Comment Input */}
+            <div className="flex gap-2 items-end pt-1">
+              <Textarea
+                placeholder="Write a comment... (Press Enter to post, Shift+Enter for new line)"
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAddComment();
+                  }
+                }}
+                rows={2}
+                className="text-xs resize-none"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddComment}
+                disabled={!newCommentText.trim()}
+                className="h-14 px-3 text-xs gap-1.5 shrink-0"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Post</span>
+              </Button>
+            </div>
           </div>
 
           <DialogFooter className="pt-3">

@@ -14,6 +14,14 @@ export interface Subtask {
 
 export type PrStatus = 'open' | 'merged' | 'closed' | 'draft';
 
+export interface TaskComment {
+  id: string;
+  author: string;
+  avatarUrl?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   projectId: string;
@@ -35,6 +43,7 @@ export interface Task {
   tags?: string[];
   dueDate?: string;
   storyPoints?: number;
+  comments?: TaskComment[];
   createdAt: string;
   updatedAt: string;
 }

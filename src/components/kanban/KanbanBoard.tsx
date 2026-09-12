@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,8 @@ interface KanbanBoardProps {
   setTaskModalOpen: (open: boolean) => void;
   columnModalOpen: boolean;
   setColumnModalOpen: (open: boolean) => void;
+  selectedTask?: Task | null;
+  onClearSelectedTask?: () => void;
 }
 
 export function KanbanBoard({
@@ -37,6 +39,8 @@ export function KanbanBoard({
   setTaskModalOpen,
   columnModalOpen,
   setColumnModalOpen,
+  selectedTask,
+  onClearSelectedTask,
 }: KanbanBoardProps) {
   const {
     activeProject,
@@ -52,6 +56,13 @@ export function KanbanBoard({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedColumnIdForNewTask, setSelectedColumnIdForNewTask] = useState<string | undefined>();
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
+
+  useEffect(() => {
+    if (selectedTask) {
+      setEditingTask(selectedTask);
+      setTaskModalOpen(true);
+    }
+  }, [selectedTask, setTaskModalOpen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -280,7 +291,14 @@ export function KanbanBoard({
       {/* Task Dialog */}
       <TaskModal
         open={taskModalOpen}
-        onOpenChange={setTaskModalOpen}
+        onOpenChange={(open) => {
+          setTaskModalOpen(open);
+          if (!open) {
+            setEditingTask(null);
+            setSelectedColumnIdForNewTask(undefined);
+            onClearSelectedTask?.();
+          }
+        }}
         projectId={activeProject.id}
         columns={columns}
         taskToEdit={editingTask}

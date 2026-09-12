@@ -10,22 +10,28 @@ import { BoardFilters } from './components/kanban/BoardFilters';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { SyncStatusButton } from './components/sync/SyncStatusButton';
+import { TimelineView } from './components/timeline/TimelineView';
+import { CommandPalette } from './components/CommandPalette';
+import { CreateProjectModal } from './components/projects/CreateProjectModal';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
 import { useBoardStore } from './store/boardStore';
 import { canUserAccessProject, getAccessibleProjects } from './lib/projectAccess';
 import { GithubIcon } from './components/icons/GithubIcon';
+import type { Task } from './types';
 import {
   CheckSquare,
   LayoutDashboard,
+  Calendar,
   BarChart3,
   ShieldCheck,
   LogOut,
   Lock,
+  Command,
 } from 'lucide-react';
 
-type ActiveView = 'board' | 'resume' | 'admin';
+type ActiveView = 'board' | 'timeline' | 'resume' | 'admin';
 
 function MainApp() {
   const { user, authState, logout } = useAuth();
@@ -33,6 +39,9 @@ function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
+  const [selectedTaskForBoard, setSelectedTaskForBoard] = useState<Task | null>(null);
 
   const isAdmin = authState === 'admin' || user?.role === 'super-admin' || user?.role === 'admin';
   const accessibleProjects = getAccessibleProjects(projects, user);
@@ -76,6 +85,15 @@ function MainApp() {
               <span>Board</span>
             </Button>
             <Button
+              variant={activeView === 'timeline' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('timeline')}
+              className="h-7 px-2.5 text-xs gap-1.5 cursor-pointer"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Timeline</span>
+            </Button>
+            <Button
               variant={activeView === 'resume' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveView('resume')}
@@ -97,8 +115,8 @@ function MainApp() {
             )}
           </nav>
 
-          {/* Project Switcher (When on Board View) */}
-          {activeView === 'board' && (
+          {/* Project Switcher (When on Board or Timeline View) */}
+          {(activeView === 'board' || activeView === 'timeline') && (
             <div className="hidden md:flex items-center">
               <div className="h-4 w-px bg-border/80 mx-2" />
               <ProjectSwitcher />
@@ -108,6 +126,19 @@ function MainApp() {
 
         {/* Right Nav Utilities */}
         <div className="flex items-center gap-2">
+          {/* Spotlight / Command Palette trigger */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCommandPaletteOpen(true)}
+            className="h-8 px-2.5 text-xs gap-2 text-muted-foreground hover:text-foreground bg-muted/40 border-border/60 hidden lg:inline-flex cursor-pointer"
+            title="Open Command Palette (⌘K)"
+          >
+            <Command className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs">Search...</span>
+            <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-muted border border-border/60">⌘K</kbd>
+          </Button>
+
           {/* Sync Button */}
           <div className="hidden sm:block">
             <SyncStatusButton />
@@ -183,6 +214,49 @@ function MainApp() {
                   setTaskModalOpen={setTaskModalOpen}
                   columnModalOpen={columnModalOpen}
                   setColumnModalOpen={setColumnModalOpen}
+                  selectedTask={selectedTaskForBoard}
+                  onClearSelectedTask={() => setSelectedTaskForBoard(null)}
+                />
+              </main>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-background/40">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 mb-4 shadow-sm">
+                <Lock className="h-7 w-7" />
+              </div>
+              <h2 className="text-xl font-bold tracking-tight mb-2">Private Board Restricted</h2>
+              <p className="text-sm text-muted-foreground max-w-md mb-6">
+                This project board is private and restricted. You do not currently have permission to view or manage it.
+              </p>
+              {accessibleProjects.length > 0 ? (
+                <Button
+                  onClick={() => setActiveProject(accessibleProjects[0].id)}
+                  className="gap-2 text-xs cursor-pointer"
+                >
+                  Switch to {accessibleProjects[0].name}
+                </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Contact an administrator or project owner to request access to this board.
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeView === 'timeline' && (
+        <>
+          {canAccessCurrent ? (
+            <>
+              <ProjectHeader
+                onOpenNewTask={() => setTaskModalOpen(true)}
+                onOpenAddColumn={() => setColumnModalOpen(true)}
+              />
+              <BoardFilters />
+              <main className="flex-1 flex flex-col min-h-0 bg-background/40">
+                <TimelineView
+                  onNewTask={() => setTaskModalOpen(true)}
                 />
               </main>
             </>
@@ -223,6 +297,28 @@ function MainApp() {
           <AdminPage />
         </main>
       )}
+
+      {/* Global Command Palette (⌘K) */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onNavigate={(view) => setActiveView(view)}
+        onSelectTask={(task) => {
+          setSelectedTaskForBoard(task);
+          setActiveView('board');
+        }}
+        onNewTask={() => {
+          setActiveView('board');
+          setTaskModalOpen(true);
+        }}
+        onNewProject={() => setCreateProjectModalOpen(true)}
+      />
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        open={createProjectModalOpen}
+        onOpenChange={setCreateProjectModalOpen}
+      />
     </div>
   );
 }

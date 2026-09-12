@@ -89,6 +89,15 @@ export const INITIAL_TASKS: Task[] = [
       { id: 'st-2', title: 'Implement AES-GCM encryption', completed: true },
       { id: 'st-3', title: 'Sync pass-list with GitHub Gist', completed: true },
     ],
+    comments: [
+      {
+        id: 'c-1',
+        author: 'diogocsilva12',
+        avatarUrl: 'https://github.com/diogocsilva12.png',
+        content: 'AES-GCM encryption verified and passes all security audits.',
+        createdAt: '2026-09-12T10:30:00.000Z',
+      },
+    ],
     createdAt: '2026-09-08T09:00:00.000Z',
     updatedAt: '2026-09-12T11:20:00.000Z',
   },
@@ -115,6 +124,15 @@ export const INITIAL_TASKS: Task[] = [
       { id: 'st-4', title: 'Configure DndContext with closestCorners', completed: true },
       { id: 'st-5', title: 'Support vertical card reordering', completed: true },
       { id: 'st-6', title: 'Implement horizontal column reordering', completed: false },
+    ],
+    comments: [
+      {
+        id: 'c-2',
+        author: 'octocat',
+        avatarUrl: 'https://github.com/octocat.png',
+        content: 'Added collision detection for horizontal columns. Smooth 60fps animations verified!',
+        createdAt: '2026-09-12T11:45:00.000Z',
+      },
     ],
     createdAt: '2026-09-08T11:00:00.000Z',
     updatedAt: '2026-09-12T12:00:00.000Z',
@@ -724,6 +742,41 @@ export const boardStore = {
     emitChange();
   },
 
+  addComment(taskId: string, content: string, author: string = 'diogocsilva12', avatarUrl?: string): void {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    const now = new Date().toISOString();
+    const newComment = {
+      id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      author,
+      avatarUrl: avatarUrl || `https://github.com/${author}.png`,
+      content: trimmed,
+      createdAt: now,
+    };
+    currentState = {
+      ...currentState,
+      tasks: currentState.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const comments = [...(t.comments || []), newComment];
+        return { ...t, comments, updatedAt: now };
+      }),
+    };
+    emitChange();
+  },
+
+  deleteComment(taskId: string, commentId: string): void {
+    const now = new Date().toISOString();
+    currentState = {
+      ...currentState,
+      tasks: currentState.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const comments = (t.comments || []).filter((c) => c.id !== commentId);
+        return { ...t, comments, updatedAt: now };
+      }),
+    };
+    emitChange();
+  },
+
   moveTask(taskId: string, targetColumnId: string, targetIndex?: number): void {
     const task = currentState.tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -933,6 +986,8 @@ export function useBoardStore() {
     toggleSubtask: boardStore.toggleSubtask,
     addSubtask: boardStore.addSubtask,
     removeSubtask: boardStore.removeSubtask,
+    addComment: boardStore.addComment,
+    deleteComment: boardStore.deleteComment,
     moveTask: boardStore.moveTask,
     reorderTasks: boardStore.reorderTasks,
     setFilter: boardStore.setFilter,
