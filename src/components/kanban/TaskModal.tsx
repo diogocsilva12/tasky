@@ -76,7 +76,7 @@ const PRIORITY_OPTIONS: {
   {
     value: 'P2',
     label: 'P2 Medium',
-    desc: 'Normal sprint task',
+    desc: 'Normal priority task',
     colorClass: 'text-amber-500 border-amber-500/40 bg-amber-500/10',
     bgSelected: 'bg-amber-500 text-white font-medium border-amber-600',
   },

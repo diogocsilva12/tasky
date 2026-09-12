@@ -7,11 +7,11 @@ import { LandingPage } from './pages/LandingPage';
 import { ProjectSwitcher } from './components/projects/ProjectSwitcher';
 import { ProjectHeader } from './components/projects/ProjectHeader';
 import { BoardFilters } from './components/kanban/BoardFilters';
+import { PublicProjectsBoard } from './components/kanban/PublicProjectsBoard';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { SyncStatusButton } from './components/sync/SyncStatusButton';
 import { TimelineView } from './components/timeline/TimelineView';
-import { SprintBar } from './components/sprints/SprintBar';
 import { CommandPalette } from './components/CommandPalette';
 import { CreateProjectModal } from './components/projects/CreateProjectModal';
 import { ExportModal } from './components/export/ExportModal';
@@ -34,11 +34,11 @@ import {
   Share2,
 } from 'lucide-react';
 
-type ActiveView = 'board' | 'timeline' | 'resume' | 'admin';
+type ActiveView = 'public-board' | 'board' | 'timeline' | 'resume' | 'admin';
 
 function MainApp() {
   const { user, authState, logout } = useAuth();
-  const { projects, activeProject, setActiveProject } = useBoardStore();
+  const { projects, activeProject, setActiveProject, resetFilter } = useBoardStore();
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
@@ -87,6 +87,15 @@ function MainApp() {
             >
               <LayoutDashboard className="h-3.5 w-3.5" />
               <span>Board</span>
+            </Button>
+            <Button
+              variant={activeView === 'public-board' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => { resetFilter(); setActiveView('public-board'); }}
+              className="h-7 px-2.5 text-xs gap-1.5 cursor-pointer"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              <span>All Projects</span>
             </Button>
             <Button
               variant={activeView === 'timeline' ? 'default' : 'ghost'}
@@ -223,7 +232,6 @@ function MainApp() {
                 onOpenNewTask={() => setTaskModalOpen(true)}
                 onOpenAddColumn={() => setColumnModalOpen(true)}
               />
-              <SprintBar />
               <BoardFilters />
               <main className="flex-1 flex flex-col min-h-0 bg-background/40">
                 <KanbanBoard
@@ -262,6 +270,14 @@ function MainApp() {
         </>
       )}
 
+      {activeView === 'public-board' && (
+        <PublicProjectsBoard onOpenProject={(projectId) => {
+          setActiveProject(projectId);
+          resetFilter();
+          setActiveView('board');
+        }} />
+      )}
+
       {activeView === 'timeline' && (
         <>
           {canAccessCurrent ? (
@@ -270,7 +286,6 @@ function MainApp() {
                 onOpenNewTask={() => setTaskModalOpen(true)}
                 onOpenAddColumn={() => setColumnModalOpen(true)}
               />
-              <SprintBar />
               <BoardFilters />
               <main className="flex-1 flex flex-col min-h-0 bg-background/40">
                 <TimelineView

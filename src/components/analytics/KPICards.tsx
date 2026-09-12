@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Task, Project } from '../../types/index';
 import { CheckCircle, Clock, Ban, Layers, Timer, Zap } from 'lucide-react';
-import { calculateTeamMetrics } from '../../lib/sprintMetrics';
+import { calculateTeamMetrics } from '../../lib/taskMetrics';
 
 interface KPICardsProps {
   tasks: Task[];

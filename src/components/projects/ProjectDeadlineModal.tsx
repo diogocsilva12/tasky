@@ -63,7 +63,7 @@ export const ProjectDeadlineModal: React.FC<ProjectDeadlineModalProps> = ({
   };
 
   const handlePresetSelect = (
-    preset: '1week' | '2weeks' | 'nextSprint' | 'endOfMonth' | 'endOfQuarter'
+    preset: '1week' | '2weeks' | '3weeks' | 'endOfMonth' | 'endOfQuarter'
   ) => {
     const calculated = getPresetDeadline(preset);
     setDeadlineDate(calculated);
@@ -144,10 +144,10 @@ export const ProjectDeadlineModal: React.FC<ProjectDeadlineModalProps> = ({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handlePresetSelect('nextSprint')}
+                onClick={() => handlePresetSelect('3weeks')}
                 className="text-[11px] h-7 px-2 border-border/70 hover:border-primary/40 hover:bg-primary/5"
               >
-                Sprint (+3w)
+                3 Weeks
               </Button>
               <Button
                 type="button"

@@ -1,5 +1,5 @@
 import { useBoardStore } from '@/store/boardStore';
-import type { Priority } from '@/types';
+import type { Priority, Task } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,16 +19,15 @@ const PRIORITIES: { id: Priority | 'ALL'; label: string; dotColor: string }[] = 
   { id: 'P4', label: 'P4 Trivial', dotColor: 'bg-emerald-500' },
 ];
 
-export function BoardFilters() {
-  const {
-    filter,
-    setFilter,
-    resetFilter,
-    activeProjectTasks,
-    projectAssignees,
-    projectTags,
-    projectMilestones,
-  } = useBoardStore();
+export function BoardFilters({ tasks }: { tasks?: Task[] }) {
+  const store = useBoardStore();
+  const { filter, setFilter, resetFilter } = store;
+  const activeProjectTasks = tasks ?? store.activeProjectTasks;
+  const projectAssignees = Array.from(new Map(
+    activeProjectTasks.flatMap((task) => task.assignees).map((assignee) => [assignee.username, assignee])
+  ).values());
+  const projectTags = [...new Set(activeProjectTasks.flatMap((task) => task.tags || []))];
+  const projectMilestones = [...new Set(activeProjectTasks.flatMap((task) => task.milestone ? [task.milestone] : []))];
 
   const hasActiveFilters =
     filter.searchQuery.trim() !== '' ||

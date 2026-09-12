@@ -1,4 +1,4 @@
-import type { Task, Sprint } from '@/types';
+import type { Task } from '@/types';
 
 export interface TeamMetrics {
   avgLeadTimeDays: number;
@@ -7,19 +7,6 @@ export interface TeamMetrics {
   totalStoryPoints: number;
   completedStoryPoints: number;
   cycleEfficiencyPercent: number; // (Cycle time / Lead time) * 100
-}
-
-export interface SprintProgress {
-  totalTasks: number;
-  completedTasks: number;
-  remainingTasks: number;
-  totalPoints: number;
-  completedPoints: number;
-  remainingPoints: number;
-  percentComplete: number;
-  daysRemaining: number;
-  isOverdue: boolean;
-  isCompleted: boolean;
 }
 
 /**
@@ -138,49 +125,3 @@ export function calculateTeamMetrics(tasks: Task[]): TeamMetrics {
   };
 }
 
-/**
- * Calculates sprint delivery progress and timeline countdown.
- */
-export function calculateSprintProgress(sprint: Sprint, tasks: Task[]): SprintProgress {
-  const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
-  const totalTasks = sprintTasks.length;
-
-  const completedTasksList = sprintTasks.filter(
-    (t) => Boolean(t.completedAt) || isDoneColumn(t.columnId)
-  );
-  const completedTasks = completedTasksList.length;
-  const remainingTasks = totalTasks - completedTasks;
-
-  const totalPoints = sprintTasks.reduce((acc, t) => acc + (t.storyPoints || 0), 0);
-  const completedPoints = completedTasksList.reduce(
-    (acc, t) => acc + (t.storyPoints || 0),
-    0
-  );
-  const remainingPoints = totalPoints - completedPoints;
-
-  const percentComplete =
-    totalPoints > 0
-      ? Math.round((completedPoints / totalPoints) * 100)
-      : totalTasks > 0
-      ? Math.round((completedTasks / totalTasks) * 100)
-      : 0;
-
-  const now = new Date();
-  const endDate = new Date(sprint.endDate);
-  const diffMs = endDate.getTime() - now.getTime();
-  const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  const isOverdue = daysRemaining < 0 && sprint.status !== 'completed';
-
-  return {
-    totalTasks,
-    completedTasks,
-    remainingTasks,
-    totalPoints,
-    completedPoints,
-    remainingPoints,
-    percentComplete,
-    daysRemaining,
-    isOverdue,
-    isCompleted: sprint.status === 'completed',
-  };
-}

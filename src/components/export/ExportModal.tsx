@@ -271,7 +271,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-foreground">
-                  Changelog & Sprint Notes Preview
+                  Changelog Preview
                 </span>
                 <div className="flex items-center gap-2">
                   <Button

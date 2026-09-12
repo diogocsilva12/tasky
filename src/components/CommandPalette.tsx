@@ -142,7 +142,7 @@ export function CommandPalette({
         category: 'views',
         categoryLabel: 'Navigation',
         title: 'Executive Resume & Analytics',
-        subtitle: 'Executive blockers summary and sprint velocity charts',
+        subtitle: 'Executive blockers summary and productivity charts',
         icon: <BarChart3 className="h-4 w-4 text-indigo-500" />,
         action: () => {
           onNavigate('resume');

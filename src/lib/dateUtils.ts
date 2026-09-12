@@ -116,7 +116,7 @@ export function getDeadlineStatus(deadlineStr?: string): DeadlineStatus {
  * Returns preset deadline dates formatted as YYYY-MM-DD
  */
 export function getPresetDeadline(
-  preset: '1week' | '2weeks' | 'endOfMonth' | 'nextSprint' | 'endOfQuarter'
+  preset: '1week' | '2weeks' | 'endOfMonth' | '3weeks' | 'endOfQuarter'
 ): string {
   const now = new Date();
 
@@ -131,7 +131,7 @@ export function getPresetDeadline(
       d.setDate(d.getDate() + 14);
       return toIsoDateString(d);
     }
-    case 'nextSprint': {
+    case '3weeks': {
       const d = new Date(now);
       d.setDate(d.getDate() + 21);
       return toIsoDateString(d);

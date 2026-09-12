@@ -200,7 +200,7 @@ export function TimelineView({ onOpenTask, onNewTask }: TimelineViewProps) {
               </Badge>
             </h2>
             <p className="text-[11px] text-muted-foreground">
-              Chronological roadmap & deadlines across sprint days
+              Chronological roadmap & deadlines across project schedules
             </p>
           </div>
         </div>

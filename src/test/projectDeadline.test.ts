@@ -65,13 +65,13 @@ describe('Project Deadline Feature', () => {
     it('generates valid preset deadline dates', () => {
       const week = getPresetDeadline('1week');
       const twoWeeks = getPresetDeadline('2weeks');
-      const sprint = getPresetDeadline('nextSprint');
+      const threeWeeks = getPresetDeadline('3weeks');
       const monthEnd = getPresetDeadline('endOfMonth');
       const quarterEnd = getPresetDeadline('endOfQuarter');
 
       expect(week).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(twoWeeks).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(sprint).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(threeWeeks).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(monthEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(quarterEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
