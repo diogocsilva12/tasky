@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { boardStore } from '@/store/boardStore';
-import type { Task, Priority, Column, Assignee, Subtask } from '@/types';
+import type { Task, Priority, Column, Assignee, Subtask, PrStatus } from '@/types';
 import {
   CheckSquare,
   GitBranch,
@@ -30,6 +30,9 @@ import {
   Plus,
   Trash2,
   ListTodo,
+  GitPullRequest,
+  GitMerge,
+  Milestone,
 } from 'lucide-react';
 
 interface TaskModalProps {
@@ -101,6 +104,9 @@ export function TaskModal({
   const [priority, setPriority] = useState<Priority>('P2');
   const [assigneesInput, setAssigneesInput] = useState('');
   const [issueNumber, setIssueNumber] = useState('');
+  const [prNumber, setPrNumber] = useState('');
+  const [prStatus, setPrStatus] = useState<PrStatus | 'none'>('none');
+  const [milestone, setMilestone] = useState('');
   const [branchName, setBranchName] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockerReason, setBlockerReason] = useState('');
@@ -125,6 +131,11 @@ export function TaskModal({
       setIssueNumber(
         taskToEdit.githubIssueNumber !== undefined ? String(taskToEdit.githubIssueNumber) : ''
       );
+      setPrNumber(
+        taskToEdit.githubPrNumber !== undefined ? String(taskToEdit.githubPrNumber) : ''
+      );
+      setPrStatus(taskToEdit.prStatus || 'none');
+      setMilestone(taskToEdit.milestone || '');
       setBranchName(taskToEdit.branchName || '');
       setDueDate(taskToEdit.dueDate || '');
       setStoryPoints(taskToEdit.storyPoints !== undefined ? String(taskToEdit.storyPoints) : '');
@@ -139,6 +150,9 @@ export function TaskModal({
       setBlockerReason('');
       setAssigneesInput('');
       setIssueNumber('');
+      setPrNumber('');
+      setPrStatus('none');
+      setMilestone('');
       setBranchName(defaultBranch || '');
       setDueDate('');
       setStoryPoints('');
@@ -201,6 +215,8 @@ export function TaskModal({
 
     const assignees = parseAssignees(assigneesInput);
     const parsedIssue = issueNumber.trim() ? parseInt(issueNumber.trim(), 10) : undefined;
+    const parsedPr = prNumber.trim() ? parseInt(prNumber.trim(), 10) : undefined;
+    const cleanPrStatus = prStatus !== 'none' ? (prStatus as PrStatus) : undefined;
     const parsedStoryPoints = storyPoints.trim() ? parseInt(storyPoints.trim(), 10) : undefined;
     const tags = tagsInput
       .split(',')
@@ -214,6 +230,9 @@ export function TaskModal({
       priority,
       assignees,
       githubIssueNumber: isNaN(parsedIssue as number) ? undefined : parsedIssue,
+      githubPrNumber: isNaN(parsedPr as number) ? undefined : parsedPr,
+      prStatus: cleanPrStatus,
+      milestone: milestone.trim() || undefined,
       branchName: branchName.trim() || undefined,
       isBlocked,
       blockerReason: isBlocked ? (blockerReason.trim() || undefined) : undefined,
@@ -374,6 +393,56 @@ export function TaskModal({
                 placeholder="e.g. feature/kanban-board"
                 value={branchName}
                 onChange={(e) => setBranchName(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          {/* GitHub PR & Milestone Row */}
+          <div className="grid grid-cols-3 gap-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                <GitPullRequest className="h-3.5 w-3.5 text-muted-foreground" />
+                Pull Request #
+              </label>
+              <Input
+                type="number"
+                placeholder="e.g. 12"
+                value={prNumber}
+                onChange={(e) => setPrNumber(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                <GitMerge className="h-3.5 w-3.5 text-muted-foreground" />
+                PR Status
+              </label>
+              <Select
+                value={prStatus}
+                onValueChange={(val) => setPrStatus(val as PrStatus | 'none')}
+              >
+                <SelectTrigger className="w-full text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">None</SelectItem>
+                  <SelectItem value="open" className="text-xs text-emerald-500">Open</SelectItem>
+                  <SelectItem value="merged" className="text-xs text-purple-500 font-semibold">Merged (Auto-Done)</SelectItem>
+                  <SelectItem value="closed" className="text-xs text-red-500">Closed</SelectItem>
+                  <SelectItem value="draft" className="text-xs text-muted-foreground">Draft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                <Milestone className="h-3.5 w-3.5 text-muted-foreground" />
+                Milestone
+              </label>
+              <Input
+                placeholder="e.g. v1.0-mvp"
+                value={milestone}
+                onChange={(e) => setMilestone(e.target.value)}
                 className="text-xs"
               />
             </div>

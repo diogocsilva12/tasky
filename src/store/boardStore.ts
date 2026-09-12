@@ -76,6 +76,9 @@ export const INITIAL_TASKS: Task[] = [
       { username: 'diogocsilva12', name: 'Diogo Silva', avatarUrl: 'https://github.com/diogocsilva12.png' },
     ],
     githubIssueNumber: 2,
+    githubPrNumber: 12,
+    prStatus: 'merged',
+    milestone: 'v1.0-mvp',
     branchName: 'feature/auth-admin',
     githubUrl: 'https://github.com/diogocsilva12/tasky/issues/2',
     tags: ['security', 'auth', 'core'],
@@ -100,6 +103,9 @@ export const INITIAL_TASKS: Task[] = [
       { username: 'diogocsilva12', name: 'Diogo Silva', avatarUrl: 'https://github.com/diogocsilva12.png' },
     ],
     githubIssueNumber: 5,
+    githubPrNumber: 15,
+    prStatus: 'open',
+    milestone: 'v1.1-features',
     branchName: 'feature/kanban-board',
     githubUrl: 'https://github.com/diogocsilva12/tasky/issues/5',
     tags: ['dnd', 'ui', 'performance'],
@@ -640,6 +646,22 @@ export const boardStore = {
         ) {
           updated.githubUrl = `https://github.com/${project.repoOwner}/${project.repoName}/issues/${updated.githubIssueNumber}`;
         }
+
+        // Auto-move to Done or Shipped if PR is merged
+        if (updates.prStatus === 'merged' && t.prStatus !== 'merged') {
+          const doneColumn = project?.columns.find(
+            (c) =>
+              c.title.toLowerCase().includes('done') ||
+              c.title.toLowerCase().includes('ship') ||
+              c.id === 'done' ||
+              c.id.includes('done') ||
+              c.id.includes('ship')
+          );
+          if (doneColumn) {
+            updated.columnId = doneColumn.id;
+          }
+        }
+
         return updated;
       }),
     };
@@ -834,6 +856,13 @@ export function getFilteredTasks(
       if (!matchTag) return false;
     }
 
+    // Milestone filter
+    if (filter.milestone && filter.milestone !== 'ALL') {
+      if (task.milestone?.toLowerCase() !== filter.milestone.toLowerCase()) {
+        return false;
+      }
+    }
+
     // Blocker filter
     if (filter.onlyBlocked && !task.isBlocked) {
       return false;
@@ -877,6 +906,11 @@ export function useBoardStore() {
     new Set(activeProjectTasks.flatMap((t) => t.tags || []))
   );
 
+  // Extract all distinct milestones in the active project for filter dropdown
+  const projectMilestones = Array.from(
+    new Set(activeProjectTasks.map((t) => t.milestone).filter((m): m is string => Boolean(m)))
+  );
+
   return {
     ...state,
     activeProject,
@@ -884,6 +918,7 @@ export function useBoardStore() {
     filteredTasks,
     projectAssignees,
     projectTags,
+    projectMilestones,
     addProject: boardStore.addProject,
     updateProject: boardStore.updateProject,
     deleteProject: boardStore.deleteProject,

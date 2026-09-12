@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, X, User, RotateCcw, Ban, Tag } from 'lucide-react';
+import { Search, X, User, RotateCcw, Ban, Tag, Milestone } from 'lucide-react';
 
 const PRIORITIES: { id: Priority | 'ALL'; label: string; dotColor: string }[] = [
   { id: 'ALL', label: 'All', dotColor: 'bg-muted-foreground' },
@@ -27,6 +27,7 @@ export function BoardFilters() {
     activeProjectTasks,
     projectAssignees,
     projectTags,
+    projectMilestones,
   } = useBoardStore();
 
   const hasActiveFilters =
@@ -34,6 +35,7 @@ export function BoardFilters() {
     filter.priority !== 'ALL' ||
     filter.assignee !== 'ALL' ||
     (filter.tag && filter.tag !== 'ALL') ||
+    (filter.milestone && filter.milestone !== 'ALL') ||
     Boolean(filter.onlyBlocked);
 
   // Calculate count per priority for current project tasks
@@ -182,6 +184,53 @@ export function BoardFilters() {
                   }`}
                 >
                   #{tag}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {/* Milestone Filter Dropdown */}
+        {projectMilestones.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`h-7 px-2.5 text-xs gap-1.5 border-border/70 ${
+                  filter.milestone && filter.milestone !== 'ALL'
+                    ? 'border-primary text-primary bg-primary/5'
+                    : ''
+                }`}
+              >
+                <Milestone className="h-3 w-3" />
+                <span className="max-w-[100px] truncate">
+                  {!filter.milestone || filter.milestone === 'ALL'
+                    ? 'Milestone'
+                    : filter.milestone}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                onClick={() => setFilter({ milestone: 'ALL' })}
+                className={`text-xs cursor-pointer ${
+                  !filter.milestone || filter.milestone === 'ALL'
+                    ? 'font-semibold text-primary'
+                    : ''
+                }`}
+              >
+                All Milestones
+              </DropdownMenuItem>
+              {projectMilestones.map((m) => (
+                <DropdownMenuItem
+                  key={m}
+                  onClick={() => setFilter({ milestone: m })}
+                  className={`text-xs cursor-pointer ${
+                    filter.milestone === m ? 'font-semibold text-primary' : ''
+                  }`}
+                >
+                  {m}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

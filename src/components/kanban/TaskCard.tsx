@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { boardStore } from '@/store/boardStore';
+import { BranchCommitsModal } from './BranchCommitsModal';
 import {
   GitBranch,
   ExternalLink,
@@ -31,6 +32,9 @@ import {
   CheckSquare,
   Calendar,
   Tag,
+  GitPullRequest,
+  GitMerge,
+  Milestone,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -83,6 +87,7 @@ export function TaskCard({
   };
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [commitsModalOpen, setCommitsModalOpen] = useState(false);
 
   const priorityInfo = PRIORITY_BADGES[task.priority] || PRIORITY_BADGES.P2;
   const repoDetails = getCleanRepoDetails({ repoOwner, repoName, githubUrl: task.githubUrl });
@@ -125,7 +130,7 @@ export function TaskCard({
         }`}
         onClick={() => onEdit?.(task)}
       >
-        {/* Top row: Priority badge, Blocked badge, Story Points, Branch tag / Issue #, Dropdown */}
+        {/* Top row: Priority badge, Blocked badge, Story Points, PR badge, Milestone, Issue #, Dropdown */}
         <div className="flex items-center justify-between gap-1.5 pb-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Priority Badge */}
@@ -140,6 +145,47 @@ export function TaskCard({
                 title={`${task.storyPoints} Story Points`}
               >
                 {task.storyPoints} pts
+              </span>
+            )}
+
+            {/* GitHub PR Link / Badge */}
+            {task.githubPrNumber !== undefined && (
+              <span
+                onClick={(e) => {
+                  const prUrl = repoDetails.prUrl(task.githubPrNumber!);
+                  if (prUrl) {
+                    e.stopPropagation();
+                    window.open(prUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                  task.prStatus === 'merged'
+                    ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30 font-semibold'
+                    : task.prStatus === 'open'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-medium'
+                    : task.prStatus === 'closed'
+                    ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 font-medium'
+                    : 'bg-muted text-muted-foreground border-border/60'
+                } hover:opacity-80 cursor-pointer`}
+                title={`PR #${task.githubPrNumber} (${task.prStatus || 'open'}) • Click to open on GitHub`}
+              >
+                {task.prStatus === 'merged' ? (
+                  <GitMerge className="h-2.5 w-2.5" />
+                ) : (
+                  <GitPullRequest className="h-2.5 w-2.5" />
+                )}
+                <span>#{task.githubPrNumber}</span>
+              </span>
+            )}
+
+            {/* Milestone Badge */}
+            {task.milestone && (
+              <span
+                className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-medium"
+                title={`Milestone: ${task.milestone}`}
+              >
+                <Milestone className="h-2.5 w-2.5" />
+                <span>{task.milestone}</span>
               </span>
             )}
 
@@ -304,23 +350,33 @@ export function TaskCard({
 
         {/* Bottom row: Branch Link, Due Date & Assignee Avatars */}
         <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-border/40">
-          {/* Branch Link */}
+          {/* Branch Link & Commit Activity Preview */}
           {task.branchName ? (
-            <span
-              onClick={(e) => {
-                if (branchUrl) {
+            <div className="flex items-center gap-1 min-w-0 max-w-[140px]">
+              <span
+                onClick={(e) => {
                   e.stopPropagation();
-                  window.open(branchUrl, '_blank', 'noopener,noreferrer');
-                }
-              }}
-              className={`inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground truncate max-w-[120px] ${
-                branchUrl ? 'hover:text-primary cursor-pointer' : ''
-              }`}
-              title={task.branchName}
-            >
-              <GitBranch className="h-3 w-3 shrink-0 text-primary/70" />
-              <span className="truncate">{task.branchName}</span>
-            </span>
+                  setCommitsModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-primary transition-colors truncate cursor-pointer"
+                title={`${task.branchName} • Click to view branch commits`}
+              >
+                <GitBranch className="h-3 w-3 shrink-0 text-primary/70" />
+                <span className="truncate">{task.branchName}</span>
+              </span>
+              {branchUrl && (
+                <a
+                  href={branchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-muted-foreground/60 hover:text-primary p-0.5 rounded transition-colors shrink-0"
+                  title="Open branch on GitHub"
+                >
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              )}
+            </div>
           ) : (
             <span />
           )}
@@ -377,6 +433,17 @@ export function TaskCard({
         destructive
         onConfirm={() => boardStore.deleteTask(task.id)}
       />
+
+      {/* Branch Commits Preview Modal */}
+      {task.branchName && (
+        <BranchCommitsModal
+          open={commitsModalOpen}
+          onOpenChange={setCommitsModalOpen}
+          repoOwner={repoOwner || 'diogocsilva12'}
+          repoName={repoName || 'tasky'}
+          branchName={task.branchName}
+        />
+      )}
     </>
   );
 }

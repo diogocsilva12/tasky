@@ -4,6 +4,7 @@ export interface CleanRepoDetails {
   repoUrl: string | null;
   branchUrl: (branch?: string) => string | null;
   issueUrl: (issueNumber: number) => string | null;
+  prUrl: (prNumber: number) => string | null;
 }
 
 /**
@@ -50,6 +51,7 @@ export function getCleanRepoDetails(
       repoUrl: null,
       branchUrl: () => null,
       issueUrl: () => null,
+      prUrl: () => null,
     };
   }
 
@@ -77,6 +79,7 @@ export function getCleanRepoDetails(
         return `${repoUrl}/tree/${encodeURIComponent(targetBranch)}`;
       },
       issueUrl: (issueNumber: number) => `${repoUrl}/issues/${issueNumber}`,
+      prUrl: (prNumber: number) => `${repoUrl}/pull/${prNumber}`,
     };
   }
 
@@ -96,6 +99,10 @@ export function getCleanRepoDetails(
     issueUrl: (issueNumber: number) => {
       if (!fallbackRepoUrl) return null;
       return `${fallbackRepoUrl}/issues/${issueNumber}`;
+    },
+    prUrl: (prNumber: number) => {
+      if (!fallbackRepoUrl) return null;
+      return `${fallbackRepoUrl}/pull/${prNumber}`;
     },
   };
 }

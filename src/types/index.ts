@@ -12,6 +12,8 @@ export interface Subtask {
   completed: boolean;
 }
 
+export type PrStatus = 'open' | 'merged' | 'closed' | 'draft';
+
 export interface Task {
   id: string;
   projectId: string;
@@ -21,6 +23,9 @@ export interface Task {
   priority: Priority;
   assignees: Assignee[];
   githubIssueNumber?: number;
+  githubPrNumber?: number;
+  prStatus?: PrStatus;
+  milestone?: string;
   githubItemId?: string;
   githubUrl?: string;
   branchName?: string;
@@ -67,6 +72,7 @@ export interface BoardFilter {
   priority: Priority | 'ALL';
   assignee: string | 'ALL';
   tag?: string | 'ALL';
+  milestone?: string | 'ALL';
   onlyBlocked?: boolean;
 }
 
