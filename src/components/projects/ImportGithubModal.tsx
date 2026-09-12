@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { boardStore } from '@/store/boardStore';
 import { cleanRepoName, cleanRepoOwner } from '@/lib/githubUrl';
+import { useAuth } from '@/context/AuthContext';
+import type { ProjectVisibility } from '@/types';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 import {
   Search,
@@ -20,6 +22,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Globe,
+  Lock,
 } from 'lucide-react';
 
 interface ImportGithubModalProps {
@@ -40,8 +44,10 @@ interface FetchedRepo {
 }
 
 export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps) {
+  const { user } = useAuth();
   const [repoInput, setRepoInput] = useState('');
   const [usernameInput, setUsernameInput] = useState('diogocsilva12');
+  const [visibility, setVisibility] = useState<ProjectVisibility>('public');
   const [loading, setLoading] = useState(false);
   const [fetchedRepos, setFetchedRepos] = useState<FetchedRepo[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +149,9 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
       boardStore.addProject({
         name: cleanRepoName(repoDetails.name) || cleanName,
         description: repoDetails.description || `Imported from GitHub: ${cleanOwner}/${cleanName}`,
+        visibility,
+        owner: user?.username || cleanOwner || 'diogocsilva12',
+        allowedUsers: [],
         repoOwner: cleanOwner,
         repoName: cleanName,
         defaultBranch: repoDetails.default_branch || 'main',
@@ -168,6 +177,9 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
     boardStore.addProject({
       name: cleanName,
       description: repo.description || `Imported from GitHub: ${cleanOwner}/${cleanName}`,
+      visibility,
+      owner: user?.username || cleanOwner || 'diogocsilva12',
+      allowedUsers: [],
       repoOwner: cleanOwner,
       repoName: cleanName,
       defaultBranch: repo.default_branch || 'main',
@@ -194,6 +206,40 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
         </DialogHeader>
 
         <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1">
+          {/* Visibility Selection */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/70 bg-card/60">
+            <div>
+              <span className="text-xs font-semibold text-foreground">Project Visibility</span>
+              <p className="text-[11px] text-muted-foreground">
+                {visibility === 'public'
+                  ? 'Public: Visible to all approved pass-list members'
+                  : 'Private: Restricted to you and invited members'}
+              </p>
+            </div>
+            <div className="flex gap-1 bg-muted/50 p-1 rounded-md border border-border/60">
+              <Button
+                type="button"
+                variant={visibility === 'public' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setVisibility('public')}
+                className="h-7 text-xs px-2.5 gap-1 cursor-pointer"
+              >
+                <Globe className="h-3.5 w-3.5 text-blue-500" />
+                <span>Public</span>
+              </Button>
+              <Button
+                type="button"
+                variant={visibility === 'private' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setVisibility('private')}
+                className="h-7 text-xs px-2.5 gap-1 cursor-pointer"
+              >
+                <Lock className="h-3.5 w-3.5 text-amber-500" />
+                <span>Private</span>
+              </Button>
+            </div>
+          </div>
+
           {/* Option 1: Direct URL or owner/repo */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-foreground">

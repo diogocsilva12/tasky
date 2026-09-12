@@ -4,6 +4,8 @@ import { AnalyticsCharts } from '../components/analytics/Charts';
 import { ExecutiveResume } from '../components/analytics/ExecutiveResume';
 import { ProjectsGrid } from '../components/analytics/ProjectsGrid';
 import { useBoardStore } from '../store/boardStore';
+import { useAuth } from '../context/AuthContext';
+import { getAccessibleProjects } from '../lib/projectAccess';
 import { Button } from '../components/ui/button';
 import { LayoutDashboard } from 'lucide-react';
 
@@ -13,9 +15,12 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToBoard }) => {
   const { tasks, projects, setActiveProject } = useBoardStore();
+  const { user } = useAuth();
 
-  const displayTasks = tasks;
-  const displayProjects = projects;
+  const accessibleProjects = getAccessibleProjects(projects, user);
+  const accessibleProjectIds = new Set(accessibleProjects.map((p) => p.id));
+  const displayProjects = accessibleProjects;
+  const displayTasks = tasks.filter((t) => accessibleProjectIds.has(t.projectId));
 
   const handleSelectProject = (projectId: string) => {
     setActiveProject(projectId);

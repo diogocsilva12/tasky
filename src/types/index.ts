@@ -31,10 +31,15 @@ export interface Column {
   order: number;
 }
 
+export type ProjectVisibility = 'public' | 'private';
+
 export interface Project {
   id: string;
   name: string;
   description?: string;
+  visibility?: ProjectVisibility;
+  owner?: string;
+  allowedUsers?: string[];
   repoOwner?: string;
   repoName?: string;
   defaultBranch?: string;

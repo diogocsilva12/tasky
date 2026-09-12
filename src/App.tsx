@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { AccessPendingPage } from './components/auth/AccessPendingPage';
@@ -13,7 +13,8 @@ import { SyncStatusButton } from './components/sync/SyncStatusButton';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
-import { boardStore } from './store/boardStore';
+import { boardStore, useBoardStore } from './store/boardStore';
+import { canUserAccessProject, getAccessibleProjects } from './lib/projectAccess';
 import { GithubIcon } from './components/icons/GithubIcon';
 import {
   CheckSquare,
@@ -22,17 +23,27 @@ import {
   ShieldCheck,
   RotateCcw,
   LogOut,
+  Lock,
 } from 'lucide-react';
 
 type ActiveView = 'board' | 'resume' | 'admin';
 
 function MainApp() {
   const { user, authState, logout } = useAuth();
+  const { projects, activeProject, setActiveProject } = useBoardStore();
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
 
   const isAdmin = authState === 'admin' || user?.role === 'super-admin' || user?.role === 'admin';
+  const accessibleProjects = getAccessibleProjects(projects, user);
+  const canAccessCurrent = activeProject ? canUserAccessProject(activeProject, user) : false;
+
+  useEffect(() => {
+    if (activeProject && !canAccessCurrent && accessibleProjects.length > 0) {
+      setActiveProject(accessibleProjects[0].id);
+    }
+  }, [activeProject, canAccessCurrent, accessibleProjects, setActiveProject]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -172,19 +183,45 @@ function MainApp() {
       {/* Main Content Area based on Active View */}
       {activeView === 'board' && (
         <>
-          <ProjectHeader
-            onOpenNewTask={() => setTaskModalOpen(true)}
-            onOpenAddColumn={() => setColumnModalOpen(true)}
-          />
-          <BoardFilters />
-          <main className="flex-1 flex flex-col min-h-0 bg-background/40">
-            <KanbanBoard
-              taskModalOpen={taskModalOpen}
-              setTaskModalOpen={setTaskModalOpen}
-              columnModalOpen={columnModalOpen}
-              setColumnModalOpen={setColumnModalOpen}
-            />
-          </main>
+          {canAccessCurrent ? (
+            <>
+              <ProjectHeader
+                onOpenNewTask={() => setTaskModalOpen(true)}
+                onOpenAddColumn={() => setColumnModalOpen(true)}
+              />
+              <BoardFilters />
+              <main className="flex-1 flex flex-col min-h-0 bg-background/40">
+                <KanbanBoard
+                  taskModalOpen={taskModalOpen}
+                  setTaskModalOpen={setTaskModalOpen}
+                  columnModalOpen={columnModalOpen}
+                  setColumnModalOpen={setColumnModalOpen}
+                />
+              </main>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-background/40">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 mb-4 shadow-sm">
+                <Lock className="h-7 w-7" />
+              </div>
+              <h2 className="text-xl font-bold tracking-tight mb-2">Private Board Restricted</h2>
+              <p className="text-sm text-muted-foreground max-w-md mb-6">
+                This project board is private and restricted. You do not currently have permission to view or manage it.
+              </p>
+              {accessibleProjects.length > 0 ? (
+                <Button
+                  onClick={() => setActiveProject(accessibleProjects[0].id)}
+                  className="gap-2 text-xs cursor-pointer"
+                >
+                  Switch to {accessibleProjects[0].name}
+                </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Contact an administrator or project owner to request access to this board.
+                </p>
+              )}
+            </div>
+          )}
         </>
       )}
 

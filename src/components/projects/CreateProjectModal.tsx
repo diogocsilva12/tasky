@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/input';
 import { boardStore } from '@/store/boardStore';
 import { cleanRepoName, cleanRepoOwner } from '@/lib/githubUrl';
-import type { Project } from '@/types';
-import { FolderGit2, GitBranch } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import type { Project, ProjectVisibility } from '@/types';
+import { FolderGit2, GitBranch, Globe, Lock } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 
 interface CreateProjectModalProps {
@@ -27,8 +28,11 @@ export function CreateProjectModal({
   onOpenChange,
   projectToEdit,
 }: CreateProjectModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState<ProjectVisibility>('public');
+  const [allowedUsersInput, setAllowedUsersInput] = useState('');
   const [repoOwner, setRepoOwner] = useState('');
   const [repoName, setRepoName] = useState('');
   const [defaultBranch, setDefaultBranch] = useState('main');
@@ -39,6 +43,8 @@ export function CreateProjectModal({
     if (projectToEdit) {
       setName(projectToEdit.name);
       setDescription(projectToEdit.description || '');
+      setVisibility(projectToEdit.visibility || 'public');
+      setAllowedUsersInput((projectToEdit.allowedUsers || []).join(', '));
       setRepoOwner(projectToEdit.repoOwner || '');
       setRepoName(projectToEdit.repoName || '');
       setDefaultBranch(projectToEdit.defaultBranch || 'main');
@@ -46,6 +52,8 @@ export function CreateProjectModal({
     } else {
       setName('');
       setDescription('');
+      setVisibility('public');
+      setAllowedUsersInput('');
       setRepoOwner('');
       setRepoName('');
       setDefaultBranch('main');
@@ -65,26 +73,28 @@ export function CreateProjectModal({
     const cleanName = cleanRepoName(repoName);
     const cleanRepoUrl = cleanOwner && cleanName ? `https://github.com/${cleanOwner}/${cleanName}` : undefined;
 
+    const parsedAllowedUsers = allowedUsersInput
+      .split(',')
+      .map((s) => s.trim().replace(/^@/, ''))
+      .filter(Boolean);
+
+    const projectPayload = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      visibility,
+      allowedUsers: visibility === 'private' ? parsedAllowedUsers : [],
+      owner: projectToEdit?.owner || user?.username || cleanOwner || 'diogocsilva12',
+      repoOwner: cleanOwner || undefined,
+      repoName: cleanName || undefined,
+      githubUrl: cleanRepoUrl,
+      defaultBranch: defaultBranch.trim() || 'main',
+      activeBranch: activeBranch.trim() || defaultBranch.trim() || 'main',
+    };
+
     if (projectToEdit) {
-      boardStore.updateProject(projectToEdit.id, {
-        name: name.trim(),
-        description: description.trim() || undefined,
-        repoOwner: cleanOwner || undefined,
-        repoName: cleanName || undefined,
-        githubUrl: cleanRepoUrl,
-        defaultBranch: defaultBranch.trim() || 'main',
-        activeBranch: activeBranch.trim() || defaultBranch.trim() || 'main',
-      });
+      boardStore.updateProject(projectToEdit.id, projectPayload);
     } else {
-      boardStore.addProject({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        repoOwner: cleanOwner || undefined,
-        repoName: cleanName || undefined,
-        githubUrl: cleanRepoUrl,
-        defaultBranch: defaultBranch.trim() || 'main',
-        activeBranch: activeBranch.trim() || defaultBranch.trim() || 'main',
-      });
+      boardStore.addProject(projectPayload);
     }
 
     onOpenChange(false);
@@ -130,6 +140,65 @@ export function CreateProjectModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
             />
+          </div>
+
+          {/* Visibility Selection */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Project Visibility</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibility('public')}
+                className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                  visibility === 'public'
+                    ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                    : 'border-border/70 hover:bg-card/70 text-muted-foreground'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground mb-0.5">
+                  <Globe className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <span>Public</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Visible to all team members on the pass-list.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVisibility('private')}
+                className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                  visibility === 'private'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs'
+                    : 'border-border/70 hover:bg-card/70 text-muted-foreground'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground mb-0.5">
+                  <Lock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  <span>Private</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Restricted to owner and permitted members.
+                </p>
+              </button>
+            </div>
+
+            {visibility === 'private' && (
+              <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 space-y-1.5 mt-2">
+                <label className="text-[11px] font-medium text-foreground">
+                  Allowed Members (GitHub Usernames)
+                </label>
+                <Input
+                  placeholder="e.g. sarah-chen, alex-dev"
+                  value={allowedUsersInput}
+                  onChange={(e) => setAllowedUsersInput(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Comma-separated GitHub usernames who can view this private board.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-3">

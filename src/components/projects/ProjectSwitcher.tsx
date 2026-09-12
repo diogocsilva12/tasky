@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useBoardStore } from '@/store/boardStore';
+import { useAuth } from '@/context/AuthContext';
+import { canUserAccessProject } from '@/lib/projectAccess';
 import { CreateProjectModal } from './CreateProjectModal';
 import { ImportGithubModal } from './ImportGithubModal';
 import { GithubIcon } from '@/components/icons/GithubIcon';
@@ -18,14 +20,19 @@ import {
   Check,
   Plus,
   Layers,
+  Lock,
 } from 'lucide-react';
 
 export function ProjectSwitcher() {
+  const { user } = useAuth();
   const { projects, activeProjectId, setActiveProject } = useBoardStore();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+  // Filter projects by current user access permissions
+  const accessibleProjects = projects.filter((p) => canUserAccessProject(p, user));
+  const activeProject =
+    accessibleProjects.find((p) => p.id === activeProjectId) || accessibleProjects[0];
 
   return (
     <>
@@ -38,6 +45,11 @@ export function ProjectSwitcher() {
             <div className="flex items-center gap-2 truncate">
               <FolderGit2 className="h-4 w-4 text-primary shrink-0" />
               <span className="truncate">{activeProject ? activeProject.name : 'Select Project'}</span>
+              {activeProject?.visibility === 'private' && (
+                <span title="Private project">
+                  <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                </span>
+              )}
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-70" />
           </Button>
@@ -46,33 +58,51 @@ export function ProjectSwitcher() {
         <DropdownMenuContent align="start" className="w-[260px]">
           <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             <Layers className="h-3.5 w-3.5" />
-            Projects ({projects.length})
+            Projects ({accessibleProjects.length})
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
           <div className="max-h-[220px] overflow-y-auto">
-            {projects.map((project) => {
-              const isActive = project.id === activeProjectId;
-              return (
-                <DropdownMenuItem
-                  key={project.id}
-                  onClick={() => setActiveProject(project.id)}
-                  className="flex items-center justify-between text-xs py-2 cursor-pointer"
-                >
-                  <div className="flex flex-col truncate pr-2">
-                    <span className={`truncate font-medium ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>
-                      {project.name}
-                    </span>
-                    {project.repoOwner && project.repoName && (
-                      <span className="text-[10px] text-muted-foreground truncate">
-                        {project.repoOwner}/{project.repoName}
-                      </span>
-                    )}
-                  </div>
-                  {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
-                </DropdownMenuItem>
-              );
-            })}
+            {accessibleProjects.length === 0 ? (
+              <div className="p-3 text-center text-xs text-muted-foreground">
+                No accessible projects found.
+              </div>
+            ) : (
+              accessibleProjects.map((project) => {
+                const isActive = activeProject && project.id === activeProject.id;
+                const isPrivate = project.visibility === 'private';
+                return (
+                  <DropdownMenuItem
+                    key={project.id}
+                    onClick={() => setActiveProject(project.id)}
+                    className="flex items-center justify-between text-xs py-2 cursor-pointer"
+                  >
+                    <div className="flex flex-col truncate pr-2">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span
+                          className={`truncate font-medium ${
+                            isActive ? 'text-primary font-semibold' : 'text-foreground'
+                          }`}
+                        >
+                          {project.name}
+                        </span>
+                        {isPrivate && (
+                          <span title="Private project">
+                            <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                          </span>
+                        )}
+                      </div>
+                      {project.repoOwner && project.repoName && (
+                        <span className="text-[10px] text-muted-foreground truncate">
+                          {project.repoOwner}/{project.repoName}
+                        </span>
+                      )}
+                    </div>
+                    {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
+                  </DropdownMenuItem>
+                );
+              })
+            )}
           </div>
 
           <DropdownMenuSeparator />

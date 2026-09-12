@@ -10,8 +10,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateProjectModal } from './CreateProjectModal';
+import { ProjectAccessModal } from './ProjectAccessModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getCleanRepoDetails } from '@/lib/githubUrl';
+import { useAuth } from '@/context/AuthContext';
+import { canUserManageProject } from '@/lib/projectAccess';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 import {
   GitBranch,
@@ -25,6 +28,9 @@ import {
   Clock,
   Columns,
   Ban,
+  Globe,
+  Lock,
+  Shield,
 } from 'lucide-react';
 
 interface ProjectHeaderProps {
@@ -34,10 +40,15 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderProps) {
   const { activeProject, activeProjectTasks, deleteProject } = useBoardStore();
+  const { user } = useAuth();
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   if (!activeProject) return null;
+
+  const canManage = canUserManageProject(activeProject, user);
+  const isPrivate = activeProject.visibility === 'private';
 
   const repoDetails = getCleanRepoDetails(activeProject);
   const repoUrl = repoDetails.repoUrl;
@@ -108,6 +119,33 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                   <span>{activeBranch}</span>
                   <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />
                 </a>
+              )}
+
+              {/* Project Visibility Badge */}
+              {isPrivate ? (
+                <button
+                  type="button"
+                  onClick={() => canManage && setAccessModalOpen(true)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 shadow-xs transition-colors ${
+                    canManage ? 'hover:bg-amber-500/20 cursor-pointer' : 'cursor-default'
+                  }`}
+                  title={canManage ? 'Private Project • Click to manage access' : 'Private Project'}
+                >
+                  <Lock className="h-3 w-3" />
+                  <span>Private</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => canManage && setAccessModalOpen(true)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 shadow-xs transition-colors ${
+                    canManage ? 'hover:bg-blue-500/20 cursor-pointer' : 'cursor-default'
+                  }`}
+                  title={canManage ? 'Public Project • Click to manage access' : 'Public Project'}
+                >
+                  <Globe className="h-3 w-3" />
+                  <span>Public</span>
+                </button>
               )}
 
               {/* P0 Alert Badge if any exist */}
@@ -194,6 +232,15 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                   <Edit2 className="h-3.5 w-3.5" />
                   <span>Edit Project</span>
                 </DropdownMenuItem>
+                {canManage && (
+                  <DropdownMenuItem
+                    onClick={() => setAccessModalOpen(true)}
+                    className="gap-2 text-xs cursor-pointer"
+                  >
+                    <Shield className="h-3.5 w-3.5" />
+                    <span>Access & Visibility</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setConfirmDeleteOpen(true)}
@@ -212,6 +259,12 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         projectToEdit={activeProject}
+      />
+
+      <ProjectAccessModal
+        open={accessModalOpen}
+        onOpenChange={setAccessModalOpen}
+        project={activeProject}
       />
 
       <ConfirmDialog

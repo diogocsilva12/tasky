@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Project, Task } from '../../types/index';
-import { ExternalLink, GitBranch, LayoutDashboard } from 'lucide-react';
+import { ExternalLink, GitBranch, LayoutDashboard, Lock, Globe } from 'lucide-react';
 import { getCleanRepoDetails } from '../../lib/githubUrl';
 
 interface ProjectsGridProps {
@@ -36,21 +36,32 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({ projects, tasks, onS
 
         return (
           <Card key={project.id} className="flex flex-col bg-card/85 backdrop-blur-md border-border/70 hover:shadow-md transition-all">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-start">
-                <span className="truncate">{project.name}</span>
-                {repoDetails.repoUrl && (
-                  <a
-                    href={repoDetails.repoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground"
-                    title="Open repository on GitHub"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                )}
-              </CardTitle>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="truncate text-base">{project.name}</CardTitle>
+                <div className="flex items-center gap-2 shrink-0">
+                  {project.visibility === 'private' ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      <Lock className="h-2.5 w-2.5" /> Private
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                      <Globe className="h-2.5 w-2.5" /> Public
+                    </span>
+                  )}
+                  {repoDetails.repoUrl && (
+                    <a
+                      href={repoDetails.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground p-0.5 rounded-md hover:bg-accent transition-colors"
+                      title="Open repository on GitHub"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="flex-1 space-y-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
