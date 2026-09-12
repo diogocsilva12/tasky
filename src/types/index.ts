@@ -44,6 +44,12 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface BoardFilter {
+  searchQuery: string;
+  priority: Priority | 'ALL';
+  assignee: string | 'ALL';
+}
+
 export interface PassListEntry {
   username: string;
   approvedAt: string;
