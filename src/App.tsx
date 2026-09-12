@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
@@ -15,6 +14,7 @@ import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
 import { boardStore } from './store/boardStore';
+import { GithubIcon } from './components/icons/GithubIcon';
 import {
   CheckSquare,
   LayoutDashboard,
@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   RotateCcw,
   LogOut,
-  Github,
 } from 'lucide-react';
 
 type ActiveView = 'board' | 'resume' | 'admin';
@@ -32,12 +31,10 @@ function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
-=======
-import LandingPage from './pages/LandingPage';
->>>>>>> feature/analytics-sync
+
+  const isAdmin = authState === 'admin' || user?.role === 'super-admin' || user?.role === 'admin';
 
   return (
-<<<<<<< HEAD
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Main Navigation Bar */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border/80 bg-background/95 px-3 sm:px-6 backdrop-blur-md">
@@ -63,7 +60,7 @@ import LandingPage from './pages/LandingPage';
               variant={activeView === 'board' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveView('board')}
-              className="h-7 px-2.5 text-xs gap-1.5"
+              className="h-7 px-2.5 text-xs gap-1.5 cursor-pointer"
             >
               <LayoutDashboard className="h-3.5 w-3.5" />
               <span>Board</span>
@@ -72,17 +69,17 @@ import LandingPage from './pages/LandingPage';
               variant={activeView === 'resume' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveView('resume')}
-              className="h-7 px-2.5 text-xs gap-1.5"
+              className="h-7 px-2.5 text-xs gap-1.5 cursor-pointer"
             >
               <BarChart3 className="h-3.5 w-3.5" />
               <span>Resume & Stats</span>
             </Button>
-            {(user?.isAdmin || authState === 'admin') && (
+            {isAdmin && (
               <Button
                 variant={activeView === 'admin' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveView('admin')}
-                className="h-7 px-2.5 text-xs gap-1.5 text-primary"
+                className="h-7 px-2.5 text-xs gap-1.5 text-primary cursor-pointer"
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
                 <span>Admin Gate</span>
@@ -111,7 +108,7 @@ import LandingPage from './pages/LandingPage';
             variant="ghost"
             size="sm"
             onClick={() => boardStore.resetToSampleData()}
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground hidden lg:flex items-center gap-1"
+            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground hidden lg:flex items-center gap-1 cursor-pointer"
             title="Reset board to sample seed data"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -126,7 +123,7 @@ import LandingPage from './pages/LandingPage';
             className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
             title="GitHub Repository"
           >
-            <Github className="h-4 w-4" />
+            <GithubIcon className="h-4 w-4" />
           </a>
 
           {/* Multi-Theme Selector */}
@@ -148,12 +145,12 @@ import LandingPage from './pages/LandingPage';
                   {user?.username}
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-tight">
-                  {user?.isAdmin ? 'Admin' : 'Member'}
+                  {isAdmin ? 'Admin' : 'Member'}
                 </span>
               </div>
             </div>
 
-            {user?.isAdmin && (
+            {isAdmin && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 hidden sm:inline-flex">
                 Admin
               </Badge>
@@ -163,7 +160,7 @@ import LandingPage from './pages/LandingPage';
               variant="ghost"
               size="icon"
               onClick={logout}
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
               title="Log out"
             >
               <LogOut className="h-3.5 w-3.5" />
@@ -203,9 +200,6 @@ import LandingPage from './pages/LandingPage';
         </main>
       )}
     </div>
-=======
-    <LandingPage />
->>>>>>> feature/analytics-sync
   );
 }
 

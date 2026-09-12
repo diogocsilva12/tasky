@@ -5,7 +5,7 @@ import { ExecutiveResume } from '../components/analytics/ExecutiveResume';
 import { ProjectsGrid } from '../components/analytics/ProjectsGrid';
 import { mockTasks, mockProjects } from '../lib/mockData';
 import { useBoardStore } from '../store/boardStore';
-import { Button } from '../ui/button';
+import { Button } from '../components/ui/button';
 import { LayoutDashboard } from 'lucide-react';
 
 interface LandingPageProps {
