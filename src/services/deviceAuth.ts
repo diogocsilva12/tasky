@@ -22,14 +22,16 @@ export type DeviceFlowStatus =
   | 'error';
 
 // Default OAuth App Client ID (can be overridden in settings or localStorage)
-export const DEFAULT_CLIENT_ID = 'Iv23li12taskyauth0';
+export const DEFAULT_CLIENT_ID = 'Ov23liYCXe1qPYV6HjQp';
+export const DEFAULT_PROXY_URL = 'https://tasky-auth.diogo-coelho-silva.workers.dev';
 
 export class DeviceAuthService {
   private static clientIdKey = 'tasky_github_client_id';
   private static proxyUrlKey = 'tasky_oauth_proxy_url';
 
   public static getClientId(): string {
-    return localStorage.getItem(this.clientIdKey) || DEFAULT_CLIENT_ID;
+    const saved = localStorage.getItem(this.clientIdKey);
+    return saved && saved !== 'Iv23li12taskyauth0' ? saved : DEFAULT_CLIENT_ID;
   }
 
   public static setClientId(id: string): void {
@@ -37,7 +39,7 @@ export class DeviceAuthService {
   }
 
   public static getProxyUrl(): string {
-    return localStorage.getItem(this.proxyUrlKey) || '';
+    return localStorage.getItem(this.proxyUrlKey) || DEFAULT_PROXY_URL;
   }
 
   public static setProxyUrl(url: string): void {
