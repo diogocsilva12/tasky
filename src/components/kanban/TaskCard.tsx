@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { boardStore } from '@/store/boardStore';
 import { BranchCommitsModal } from './BranchCommitsModal';
+import { TaskCommentsModal } from './TaskCommentsModal';
 import {
   GitBranch,
   ExternalLink,
@@ -89,6 +90,7 @@ export function TaskCard({
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [commitsModalOpen, setCommitsModalOpen] = useState(false);
+  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
 
   const priorityInfo = PRIORITY_BADGES[task.priority] || PRIORITY_BADGES.P2;
   const repoDetails = getCleanRepoDetails({ repoOwner, repoName, githubUrl: task.githubUrl });
@@ -240,6 +242,14 @@ export function TaskCard({
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                   <span>Edit Task</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => setCommentsModalOpen(true)}
+                  className="gap-2 text-xs cursor-pointer"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  <span>Comments Thread {task.comments?.length ? `(${task.comments.length})` : ''}</span>
                 </DropdownMenuItem>
 
                 {projectColumns.length > 1 && (
@@ -402,12 +412,12 @@ export function TaskCard({
           {/* Comments Count Badge */}
           {task.comments && task.comments.length > 0 && (
             <span
-              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0 px-1 py-0.5 rounded hover:bg-muted/60"
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit?.(task);
+                setCommentsModalOpen(true);
               }}
-              title={`${task.comments.length} comment${task.comments.length > 1 ? 's' : ''}`}
+              title={`${task.comments.length} comment${task.comments.length > 1 ? 's' : ''} • Click to open conversation thread`}
             >
               <MessageSquare className="h-2.5 w-2.5" />
               <span>{task.comments.length}</span>
@@ -460,6 +470,13 @@ export function TaskCard({
           branchName={task.branchName}
         />
       )}
+
+      {/* Task Comments Conversation Thread Modal */}
+      <TaskCommentsModal
+        open={commentsModalOpen}
+        onOpenChange={setCommentsModalOpen}
+        taskId={task.id}
+      />
     </>
   );
 }
