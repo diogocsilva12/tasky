@@ -17,6 +17,7 @@ import {
   X,
   Command,
   FileText,
+  Share2,
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -26,6 +27,7 @@ interface CommandPaletteProps {
   onSelectTask: (task: Task) => void;
   onNewTask: () => void;
   onNewProject: () => void;
+  onExportData?: () => void;
 }
 
 interface PaletteItem {
@@ -65,6 +67,7 @@ export function CommandPalette({
   onSelectTask,
   onNewTask,
   onNewProject,
+  onExportData,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -191,6 +194,18 @@ export function CommandPalette({
           onOpenChange(false);
         },
       },
+      {
+        id: 'action-export-suite',
+        category: 'actions',
+        categoryLabel: 'Actions',
+        title: 'Export & Backup Suite',
+        subtitle: 'Export workspace data to JSON backup, CSV spreadsheet, or Markdown changelog',
+        icon: <Share2 className="h-4 w-4 text-purple-500" />,
+        action: () => {
+          onExportData?.();
+          onOpenChange(false);
+        },
+      },
     ];
 
     result.push(...actions.filter((a) => !q || a.title.toLowerCase().includes(q) || a.subtitle?.toLowerCase().includes(q)));
@@ -271,7 +286,7 @@ export function CommandPalette({
     }
 
     return result;
-  }, [query, accessibleProjects, projects, tasks, isAdmin, theme, onNavigate, onNewTask, onNewProject, onSelectTask, setActiveProject, setTheme, onOpenChange]);
+  }, [query, accessibleProjects, projects, tasks, isAdmin, theme, onNavigate, onNewTask, onNewProject, onSelectTask, onExportData, setActiveProject, setTheme, onOpenChange]);
 
   // Keep selected index within bounds
   useEffect(() => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { KPICards } from '../components/analytics/KPICards';
 import { AnalyticsCharts } from '../components/analytics/Charts';
+import { VelocityChart } from '../components/analytics/VelocityChart';
 import { ExecutiveResume } from '../components/analytics/ExecutiveResume';
 import { ProjectsGrid } from '../components/analytics/ProjectsGrid';
 import { useBoardStore } from '../store/boardStore';
@@ -56,6 +57,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToBoard }) =
         <section>
           <h2 className="text-xl font-semibold mb-4">Productivity Overview</h2>
           <KPICards tasks={displayTasks} projects={displayProjects} />
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Sprint Velocity & Burndown</h2>
+          <VelocityChart tasks={displayTasks} projects={displayProjects} />
         </section>
 
         <section>

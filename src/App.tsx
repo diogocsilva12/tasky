@@ -13,6 +13,7 @@ import { SyncStatusButton } from './components/sync/SyncStatusButton';
 import { TimelineView } from './components/timeline/TimelineView';
 import { CommandPalette } from './components/CommandPalette';
 import { CreateProjectModal } from './components/projects/CreateProjectModal';
+import { ExportModal } from './components/export/ExportModal';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
@@ -29,6 +30,7 @@ import {
   LogOut,
   Lock,
   Command,
+  Share2,
 } from 'lucide-react';
 
 type ActiveView = 'board' | 'timeline' | 'resume' | 'admin';
@@ -41,6 +43,7 @@ function MainApp() {
   const [columnModalOpen, setColumnModalOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedTaskForBoard, setSelectedTaskForBoard] = useState<Task | null>(null);
 
   const isAdmin = authState === 'admin' || user?.role === 'super-admin' || user?.role === 'admin';
@@ -137,6 +140,18 @@ function MainApp() {
             <Command className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs">Search...</span>
             <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-muted border border-border/60">⌘K</kbd>
+          </Button>
+
+          {/* Export & Backup Suite Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setExportModalOpen(true)}
+            className="h-8 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground bg-muted/40 border-border/60 hidden sm:inline-flex cursor-pointer"
+            title="Export & Backup Data (JSON, CSV, Markdown)"
+          >
+            <Share2 className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs">Export</span>
           </Button>
 
           {/* Sync Button */}
@@ -312,12 +327,19 @@ function MainApp() {
           setTaskModalOpen(true);
         }}
         onNewProject={() => setCreateProjectModalOpen(true)}
+        onExportData={() => setExportModalOpen(true)}
       />
 
       {/* Create Project Modal */}
       <CreateProjectModal
         open={createProjectModalOpen}
         onOpenChange={setCreateProjectModalOpen}
+      />
+
+      {/* Export & Backup Suite Modal */}
+      <ExportModal
+        open={exportModalOpen}
+        onOpenChange={setExportModalOpen}
       />
     </div>
   );
