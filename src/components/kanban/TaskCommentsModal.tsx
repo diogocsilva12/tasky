@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useBoardStore } from '@/store/boardStore';
 import { useAuth } from '@/context/AuthContext';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import type { Priority } from '@/types';
 import {
   MessageSquare,
@@ -210,9 +211,9 @@ export const TaskCommentsModal: React.FC<TaskCommentsModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Comment Bubble Content */}
-                  <div className="ml-7 p-3 rounded-xl border border-border/60 bg-card/85 backdrop-blur-xs text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap shadow-xs">
-                    {comment.content}
+                  {/* Comment Bubble Content with Markdown & Syntax Highlighting */}
+                  <div className="ml-7 p-3 rounded-xl border border-border/60 bg-card/85 backdrop-blur-xs text-xs text-foreground/90 leading-relaxed shadow-xs">
+                    <MarkdownRenderer content={comment.content} />
                   </div>
                 </div>
               );

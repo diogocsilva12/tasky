@@ -19,6 +19,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { boardStore } from '@/store/boardStore';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import type { Task, Priority, Column, Assignee, Subtask, PrStatus, TaskComment } from '@/types';
 import {
   CheckSquare,
@@ -37,6 +38,8 @@ import {
   Milestone,
   MessageSquare,
   Send,
+  Eye,
+  Edit3,
 } from 'lucide-react';
 
 interface TaskModalProps {
@@ -122,6 +125,7 @@ export function TaskModal({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [newCommentText, setNewCommentText] = useState('');
+  const [descTab, setDescTab] = useState<'write' | 'preview'>('write');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -170,6 +174,7 @@ export function TaskModal({
     }
     setNewSubtaskTitle('');
     setNewCommentText('');
+    setDescTab('write');
     setError('');
   }, [taskToEdit, defaultColumnId, defaultBranch, columns, open]);
 
@@ -325,16 +330,55 @@ export function TaskModal({
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
 
-          {/* Description */}
+          {/* Description with Write / Preview Tabs */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">Description</label>
-            <Textarea
-              placeholder="Detailed description, acceptance criteria, or notes..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="resize-y"
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground">Description</label>
+              <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setDescTab('write')}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer font-medium ${
+                    descTab === 'write'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Edit3 className="h-3 w-3" />
+                  <span>Write</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDescTab('preview')}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer font-medium ${
+                    descTab === 'preview'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Eye className="h-3 w-3" />
+                  <span>Preview Markdown</span>
+                </button>
+              </div>
+            </div>
+
+            {descTab === 'write' ? (
+              <Textarea
+                placeholder="Detailed description, acceptance criteria, or notes... (Markdown supported: **bold**, `code`, ```ts code blocks, - [ ] tasks)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="resize-y text-xs font-mono"
+              />
+            ) : (
+              <div className="min-h-[86px] max-h-56 overflow-y-auto p-3 rounded-lg border border-border/70 bg-muted/20 backdrop-blur-xs text-xs">
+                {description.trim() ? (
+                  <MarkdownRenderer content={description} />
+                ) : (
+                  <p className="text-muted-foreground italic text-xs">No description to preview.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Priority P0-P4 Selector */}
@@ -698,9 +742,9 @@ export function TaskModal({
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
-                    <p className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed pl-7">
-                      {comment.content}
-                    </p>
+                    <div className="pl-7 pt-0.5">
+                      <MarkdownRenderer content={comment.content} />
+                    </div>
                   </div>
                 ))}
               </div>
