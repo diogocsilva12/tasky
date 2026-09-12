@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/input';
 import { boardStore } from '@/store/boardStore';
+import { cleanRepoName, cleanRepoOwner } from '@/lib/githubUrl';
 import type { Project } from '@/types';
 import { FolderGit2, GitBranch } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/GithubIcon';
@@ -60,12 +61,17 @@ export function CreateProjectModal({
       return;
     }
 
+    const cleanOwner = cleanRepoOwner(repoOwner);
+    const cleanName = cleanRepoName(repoName);
+    const cleanRepoUrl = cleanOwner && cleanName ? `https://github.com/${cleanOwner}/${cleanName}` : undefined;
+
     if (projectToEdit) {
       boardStore.updateProject(projectToEdit.id, {
         name: name.trim(),
         description: description.trim() || undefined,
-        repoOwner: repoOwner.trim() || undefined,
-        repoName: repoName.trim() || undefined,
+        repoOwner: cleanOwner || undefined,
+        repoName: cleanName || undefined,
+        githubUrl: cleanRepoUrl,
         defaultBranch: defaultBranch.trim() || 'main',
         activeBranch: activeBranch.trim() || defaultBranch.trim() || 'main',
       });
@@ -73,8 +79,9 @@ export function CreateProjectModal({
       boardStore.addProject({
         name: name.trim(),
         description: description.trim() || undefined,
-        repoOwner: repoOwner.trim() || undefined,
-        repoName: repoName.trim() || undefined,
+        repoOwner: cleanOwner || undefined,
+        repoName: cleanName || undefined,
+        githubUrl: cleanRepoUrl,
         defaultBranch: defaultBranch.trim() || 'main',
         activeBranch: activeBranch.trim() || defaultBranch.trim() || 'main',
       });

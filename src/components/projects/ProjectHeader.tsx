@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateProjectModal } from './CreateProjectModal';
+import { getCleanRepoDetails } from '@/lib/githubUrl';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 import {
   GitBranch,
@@ -36,18 +37,10 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
 
   if (!activeProject) return null;
 
-  const repoUrl =
-    activeProject.githubUrl ||
-    (activeProject.repoOwner && activeProject.repoName
-      ? `https://github.com/${activeProject.repoOwner}/${activeProject.repoName}`
-      : null);
-
+  const repoDetails = getCleanRepoDetails(activeProject);
+  const repoUrl = repoDetails.repoUrl;
   const activeBranch = activeProject.activeBranch || activeProject.defaultBranch || 'main';
-
-  const branchUrl =
-    activeProject.repoOwner && activeProject.repoName
-      ? `https://github.com/${activeProject.repoOwner}/${activeProject.repoName}/tree/${encodeURIComponent(activeBranch)}`
-      : repoUrl;
+  const branchUrl = repoDetails.branchUrl(activeBranch);
 
   // Stats calculation
   const totalTasks = activeProjectTasks.length;
@@ -91,7 +84,7 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
               </h1>
 
               {/* GitHub Repo Badge / Link */}
-              {repoUrl && activeProject.repoOwner && activeProject.repoName && (
+              {repoUrl && (
                 <a
                   href={repoUrl}
                   target="_blank"
@@ -101,7 +94,7 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                 >
                   <GithubIcon className="h-3.5 w-3.5 opacity-80 group-hover:opacity-100" />
                   <span>
-                    {activeProject.repoOwner}/{activeProject.repoName}
+                    {repoDetails.owner}/{repoDetails.name}
                   </span>
                   <ExternalLink className="h-3 w-3 text-muted-foreground opacity-60 group-hover:opacity-100" />
                 </a>

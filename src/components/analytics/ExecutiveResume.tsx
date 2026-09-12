@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Task, Project } from '../../types/index';
 import { ArrowRight, ExternalLink, GitBranch } from 'lucide-react';
+import { getCleanRepoDetails } from '../../lib/githubUrl';
 
 interface ExecutiveResumeProps {
   tasks: Task[];
@@ -28,6 +29,10 @@ export const ExecutiveResume: React.FC<ExecutiveResumeProps> = ({ tasks, project
           <div className="space-y-4">
             {highPriorityTasks.map(task => {
               const project = projects.find(p => p.id === task.projectId);
+              const repoDetails = project ? getCleanRepoDetails(project) : null;
+              const branchUrl = repoDetails && task.branchName ? repoDetails.branchUrl(task.branchName) : null;
+              const directUrl = task.githubUrl ? getCleanRepoDetails({ githubUrl: task.githubUrl }).repoUrl : repoDetails?.repoUrl;
+
               return (
                 <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 last:border-0 last:pb-0 gap-4">
                   <div className="flex-1 space-y-1">
@@ -42,7 +47,19 @@ export const ExecutiveResume: React.FC<ExecutiveResumeProps> = ({ tasks, project
                       {task.branchName && (
                         <span className="flex items-center">
                           <GitBranch className="w-3 h-3 mr-1" />
-                          {task.branchName}
+                          {branchUrl ? (
+                            <a
+                              href={branchUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary transition-colors inline-flex items-center gap-0.5"
+                            >
+                              <span>{task.branchName}</span>
+                              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                            </a>
+                          ) : (
+                            <span>{task.branchName}</span>
+                          )}
                         </span>
                       )}
                       {task.assignees.length > 0 && (
@@ -51,9 +68,9 @@ export const ExecutiveResume: React.FC<ExecutiveResumeProps> = ({ tasks, project
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {task.githubUrl && (
+                    {directUrl && (
                       <Button variant="ghost" size="sm" asChild>
-                        <a href={task.githubUrl} target="_blank" rel="noopener noreferrer">
+                        <a href={directUrl} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       </Button>

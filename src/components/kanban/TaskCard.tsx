@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Task, Priority, Column } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { getCleanRepoDetails } from '@/lib/githubUrl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -76,17 +77,12 @@ export function TaskCard({
   };
 
   const priorityInfo = PRIORITY_BADGES[task.priority] || PRIORITY_BADGES.P2;
-
-  const branchUrl =
-    repoOwner && repoName && task.branchName
-      ? `https://github.com/${repoOwner}/${repoName}/tree/${encodeURIComponent(task.branchName)}`
-      : null;
-
+  const repoDetails = getCleanRepoDetails({ repoOwner, repoName, githubUrl: task.githubUrl });
+  const branchUrl = task.branchName ? repoDetails.branchUrl(task.branchName) : null;
   const issueUrl =
-    task.githubUrl ||
-    (repoOwner && repoName && task.githubIssueNumber
-      ? `https://github.com/${repoOwner}/${repoName}/issues/${task.githubIssueNumber}`
-      : null);
+    task.githubIssueNumber !== undefined
+      ? repoDetails.issueUrl(task.githubIssueNumber)
+      : task.githubUrl || null;
 
   const getInitials = (username: string) => {
     return username.slice(0, 2).toUpperCase();

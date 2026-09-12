@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { boardStore } from '@/store/boardStore';
+import { cleanRepoName, cleanRepoOwner } from '@/lib/githubUrl';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 import {
   Search,
@@ -51,16 +52,22 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
     const trimmed = input.trim().replace(/\/+$/, '');
     if (!trimmed) return null;
 
-    // Match full URL: https://github.com/owner/repo
-    const urlMatch = trimmed.match(/github\.com\/([^/]+)\/([^/]+)/);
+    // Match full URL: https://github.com/owner/repo or git@github.com:owner/repo
+    const urlMatch = trimmed.match(/github\.com[:/]([^/]+)\/([^/]+)/);
     if (urlMatch) {
-      return { owner: urlMatch[1], name: urlMatch[2] };
+      return {
+        owner: cleanRepoOwner(urlMatch[1]),
+        name: cleanRepoName(urlMatch[2]),
+      };
     }
 
     // Match owner/repo
     const parts = trimmed.split('/');
     if (parts.length === 2 && parts[0] && parts[1]) {
-      return { owner: parts[0], name: parts[1] };
+      return {
+        owner: cleanRepoOwner(parts[0]),
+        name: cleanRepoName(parts[1]),
+      };
     }
 
     return null;
@@ -108,19 +115,22 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
     setError(null);
 
     try {
-      // Try to fetch repo metadata from GitHub API
+      const cleanOwner = cleanRepoOwner(parsed.owner);
+      const cleanName = cleanRepoName(parsed.name);
+      const cleanRepoUrl = `https://github.com/${cleanOwner}/${cleanName}`;
+
       let repoDetails: Partial<FetchedRepo> = {
-        name: parsed.name,
-        full_name: `${parsed.owner}/${parsed.name}`,
-        owner: { login: parsed.owner, avatar_url: '' },
+        name: cleanName,
+        full_name: `${cleanOwner}/${cleanName}`,
+        owner: { login: cleanOwner, avatar_url: '' },
         default_branch: 'main',
-        html_url: `https://github.com/${parsed.owner}/${parsed.name}`,
+        html_url: cleanRepoUrl,
         description: null,
       };
 
       try {
         const response = await fetch(
-          `https://api.github.com/repos/${parsed.owner}/${parsed.name}`
+          `https://api.github.com/repos/${cleanOwner}/${cleanName}`
         );
         if (response.ok) {
           const data = await response.json();
@@ -131,13 +141,13 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
       }
 
       boardStore.addProject({
-        name: repoDetails.name || parsed.name,
-        description: repoDetails.description || `Imported from GitHub: ${parsed.owner}/${parsed.name}`,
-        repoOwner: parsed.owner,
-        repoName: parsed.name,
+        name: cleanRepoName(repoDetails.name) || cleanName,
+        description: repoDetails.description || `Imported from GitHub: ${cleanOwner}/${cleanName}`,
+        repoOwner: cleanOwner,
+        repoName: cleanName,
         defaultBranch: repoDetails.default_branch || 'main',
         activeBranch: repoDetails.default_branch || 'main',
-        githubUrl: repoDetails.html_url || `https://github.com/${parsed.owner}/${parsed.name}`,
+        githubUrl: cleanRepoUrl,
       });
 
       onOpenChange(false);
@@ -151,14 +161,18 @@ export function ImportGithubModal({ open, onOpenChange }: ImportGithubModalProps
   };
 
   const handleImportSelected = (repo: FetchedRepo) => {
+    const cleanOwner = cleanRepoOwner(repo.owner.login);
+    const cleanName = cleanRepoName(repo.name);
+    const cleanRepoUrl = `https://github.com/${cleanOwner}/${cleanName}`;
+
     boardStore.addProject({
-      name: repo.name,
-      description: repo.description || `Imported from GitHub: ${repo.full_name}`,
-      repoOwner: repo.owner.login,
-      repoName: repo.name,
+      name: cleanName,
+      description: repo.description || `Imported from GitHub: ${cleanOwner}/${cleanName}`,
+      repoOwner: cleanOwner,
+      repoName: cleanName,
       defaultBranch: repo.default_branch || 'main',
       activeBranch: repo.default_branch || 'main',
-      githubUrl: repo.html_url,
+      githubUrl: cleanRepoUrl,
     });
 
     onOpenChange(false);

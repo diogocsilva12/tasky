@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Project, Column, Task, BoardFilter } from '@/types';
+import { getCleanRepoDetails } from '@/lib/githubUrl';
 
 const STORAGE_KEYS = {
   PROJECTS: 'tasky_projects_v1',
@@ -305,7 +306,16 @@ function loadInitialState(): BoardState {
     const savedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
     const savedActiveId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PROJECT_ID);
 
-    const projects: Project[] = savedProjects ? JSON.parse(savedProjects) : INITIAL_PROJECTS;
+    const rawProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : INITIAL_PROJECTS;
+    const projects: Project[] = rawProjects.map((p) => {
+      const details = getCleanRepoDetails(p);
+      return {
+        ...p,
+        repoOwner: details.owner || p.repoOwner,
+        repoName: details.name || p.repoName,
+        githubUrl: details.repoUrl || p.githubUrl,
+      };
+    });
     const tasks: Task[] = savedTasks ? JSON.parse(savedTasks) : INITIAL_TASKS;
     const activeProjectId: string =
       savedActiveId && projects.some((p) => p.id === savedActiveId)
@@ -368,11 +378,10 @@ export const boardStore = {
       ? projectData.columns
       : INITIAL_COLUMNS.map((col, idx) => ({ ...col, id: `col-${id}-${idx}` }));
 
-    const repoOwner = projectData.repoOwner?.trim() || undefined;
-    const repoName = projectData.repoName?.trim() || undefined;
-    const githubUrl =
-      projectData.githubUrl ||
-      (repoOwner && repoName ? `https://github.com/${repoOwner}/${repoName}` : undefined);
+    const details = getCleanRepoDetails(projectData);
+    const repoOwner = details.owner || undefined;
+    const repoName = details.name || undefined;
+    const githubUrl = details.repoUrl || undefined;
 
     const newProject: Project = {
       ...projectData,
@@ -402,14 +411,11 @@ export const boardStore = {
       ...currentState,
       projects: currentState.projects.map((p) => {
         if (p.id !== id) return p;
-        const repoOwner = updates.repoOwner !== undefined ? updates.repoOwner?.trim() || undefined : p.repoOwner;
-        const repoName = updates.repoName !== undefined ? updates.repoName?.trim() || undefined : p.repoName;
-        const githubUrl =
-          updates.githubUrl !== undefined
-            ? updates.githubUrl
-            : repoOwner && repoName
-            ? `https://github.com/${repoOwner}/${repoName}`
-            : p.githubUrl;
+        const combined = { ...p, ...updates };
+        const details = getCleanRepoDetails(combined);
+        const repoOwner = details.owner || undefined;
+        const repoName = details.name || undefined;
+        const githubUrl = details.repoUrl || undefined;
 
         return {
           ...p,
