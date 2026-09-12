@@ -21,6 +21,7 @@ export const INITIAL_PROJECTS: Project[] = [
     id: 'proj-core-engine',
     name: 'Tasky Core Engine',
     description: 'Local-first Kanban engine, GitHub Projects V2 bi-directional sync, and encrypted security gatekeeper.',
+    deadline: '2026-10-31',
     visibility: 'public',
     owner: 'diogocsilva12',
     allowedUsers: [],
@@ -43,6 +44,7 @@ export const INITIAL_PROJECTS: Project[] = [
     id: 'proj-frontend-redesign',
     name: 'Frontend Redesign',
     description: 'Minimalist shadcn/ui primitives, responsive layout, and dark mode palette overhaul.',
+    deadline: '2026-11-15',
     visibility: 'public',
     owner: 'diogocsilva12',
     allowedUsers: [],
@@ -505,6 +507,12 @@ export const boardStore = {
       };
       emitChange();
     }
+  },
+
+  updateProjectDeadline(id: string, deadline?: string): void {
+    const project = currentState.projects.find((p) => p.id === id);
+    if (!project) return;
+    boardStore.updateProject(id, { deadline: deadline || undefined });
   },
 
   // ---------------- Columns ----------------
@@ -974,6 +982,7 @@ export function useBoardStore() {
     projectMilestones,
     addProject: boardStore.addProject,
     updateProject: boardStore.updateProject,
+    updateProjectDeadline: boardStore.updateProjectDeadline,
     deleteProject: boardStore.deleteProject,
     setActiveProject: boardStore.setActiveProject,
     addColumn: boardStore.addColumn,

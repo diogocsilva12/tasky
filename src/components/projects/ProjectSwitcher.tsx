@@ -14,6 +14,7 @@ import { canUserAccessProject } from '@/lib/projectAccess';
 import { CreateProjectModal } from './CreateProjectModal';
 import { ImportGithubModal } from './ImportGithubModal';
 import { GithubIcon } from '@/components/icons/GithubIcon';
+import { formatDeadlineDate } from '@/lib/dateUtils';
 import {
   FolderGit2,
   ChevronDown,
@@ -21,6 +22,7 @@ import {
   Plus,
   Layers,
   Lock,
+  Calendar,
 } from 'lucide-react';
 
 export function ProjectSwitcher() {
@@ -92,11 +94,24 @@ export function ProjectSwitcher() {
                           </span>
                         )}
                       </div>
-                      {project.repoOwner && project.repoName && (
-                        <span className="text-[10px] text-muted-foreground truncate">
-                          {project.repoOwner}/{project.repoName}
-                        </span>
-                      )}
+                      <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground truncate mt-0.5">
+                        {project.repoOwner && project.repoName ? (
+                          <span className="truncate">
+                            {project.repoOwner}/{project.repoName}
+                          </span>
+                        ) : (
+                          <span />
+                        )}
+                        {project.deadline && (
+                          <span
+                            className="shrink-0 flex items-center gap-1 text-primary/80 font-mono text-[9px] bg-primary/10 px-1 py-0.2 rounded border border-primary/20"
+                            title={`Deadline: ${formatDeadlineDate(project.deadline)}`}
+                          >
+                            <Calendar className="h-2.5 w-2.5" />
+                            <span>{formatDeadlineDate(project.deadline)}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
                   </DropdownMenuItem>

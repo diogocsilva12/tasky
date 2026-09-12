@@ -14,7 +14,7 @@ import { boardStore } from '@/store/boardStore';
 import { cleanRepoName, cleanRepoOwner } from '@/lib/githubUrl';
 import { useAuth } from '@/context/AuthContext';
 import type { Project, ProjectVisibility } from '@/types';
-import { FolderGit2, GitBranch, Globe, Lock } from 'lucide-react';
+import { FolderGit2, GitBranch, Globe, Lock, Calendar } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 
 interface CreateProjectModalProps {
@@ -31,6 +31,7 @@ export function CreateProjectModal({
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [visibility, setVisibility] = useState<ProjectVisibility>('public');
   const [allowedUsersInput, setAllowedUsersInput] = useState('');
   const [repoOwner, setRepoOwner] = useState('');
@@ -43,6 +44,7 @@ export function CreateProjectModal({
     if (projectToEdit) {
       setName(projectToEdit.name);
       setDescription(projectToEdit.description || '');
+      setDeadline(projectToEdit.deadline ? projectToEdit.deadline.split('T')[0] : '');
       setVisibility(projectToEdit.visibility || 'public');
       setAllowedUsersInput((projectToEdit.allowedUsers || []).join(', '));
       setRepoOwner(projectToEdit.repoOwner || '');
@@ -52,6 +54,7 @@ export function CreateProjectModal({
     } else {
       setName('');
       setDescription('');
+      setDeadline('');
       setVisibility('public');
       setAllowedUsersInput('');
       setRepoOwner('');
@@ -81,6 +84,7 @@ export function CreateProjectModal({
     const projectPayload = {
       name: name.trim(),
       description: description.trim() || undefined,
+      deadline: deadline ? deadline : undefined,
       visibility,
       allowedUsers: visibility === 'private' ? parsedAllowedUsers : [],
       owner: projectToEdit?.owner || user?.username || cleanOwner || 'diogocsilva12',
@@ -140,6 +144,34 @@ export function CreateProjectModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
             />
+          </div>
+
+          {/* Project Target Deadline */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-primary" />
+                <span>Project Target Deadline</span>
+              </span>
+              {deadline && (
+                <button
+                  type="button"
+                  onClick={() => setDeadline('')}
+                  className="text-[10px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </label>
+            <Input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="text-xs h-9 bg-background/80"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Optional completion target date for the project and Kanban board.
+            </p>
           </div>
 
           {/* Visibility Selection */}

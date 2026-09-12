@@ -11,8 +11,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CreateProjectModal } from './CreateProjectModal';
 import { ProjectAccessModal } from './ProjectAccessModal';
+import { ProjectDeadlineModal } from './ProjectDeadlineModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getCleanRepoDetails } from '@/lib/githubUrl';
+import { getDeadlineStatus } from '@/lib/dateUtils';
 import { useAuth } from '@/context/AuthContext';
 import { canUserManageProject } from '@/lib/projectAccess';
 import { GithubIcon } from '@/components/icons/GithubIcon';
@@ -31,6 +33,7 @@ import {
   Globe,
   Lock,
   Shield,
+  Calendar,
 } from 'lucide-react';
 
 interface ProjectHeaderProps {
@@ -43,12 +46,14 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
   const { user } = useAuth();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   if (!activeProject) return null;
 
   const canManage = canUserManageProject(activeProject, user);
   const isPrivate = activeProject.visibility === 'private';
+  const deadlineStatus = getDeadlineStatus(activeProject.deadline);
 
   const repoDetails = getCleanRepoDetails(activeProject);
   const repoUrl = repoDetails.repoUrl;
@@ -148,6 +153,38 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                 </button>
               )}
 
+              {/* Project Deadline Badge / Action */}
+              {activeProject.deadline ? (
+                <button
+                  type="button"
+                  onClick={() => canManage && setDeadlineModalOpen(true)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs shadow-xs transition-colors ${
+                    deadlineStatus.badgeClass
+                  } ${canManage ? 'cursor-pointer hover:opacity-85' : 'cursor-default'}`}
+                  title={
+                    canManage
+                      ? `Project Deadline: ${deadlineStatus.formattedDate} • ${deadlineStatus.label} • Click to change deadline`
+                      : `Project Deadline: ${deadlineStatus.formattedDate} • ${deadlineStatus.label}`
+                  }
+                >
+                  <Calendar className="h-3 w-3" />
+                  <span>
+                    Deadline: {deadlineStatus.formattedDate}
+                    <span className="opacity-80 font-normal ml-1">({deadlineStatus.label})</span>
+                  </span>
+                </button>
+              ) : canManage ? (
+                <button
+                  type="button"
+                  onClick={() => setDeadlineModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border/80 bg-background/60 hover:bg-primary/10 hover:border-primary/40 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground shadow-xs transition-all cursor-pointer"
+                  title="Add target deadline for this project board"
+                >
+                  <Calendar className="h-3 w-3 text-primary/80" />
+                  <span>+ Set Deadline</span>
+                </button>
+              ) : null}
+
               {/* P0 Alert Badge if any exist */}
               {p0Count > 0 && (
                 <Badge variant="p0" className="gap-1 animate-pulse">
@@ -234,6 +271,15 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                 </DropdownMenuItem>
                 {canManage && (
                   <DropdownMenuItem
+                    onClick={() => setDeadlineModalOpen(true)}
+                    className="gap-2 text-xs cursor-pointer"
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{activeProject.deadline ? 'Change Deadline' : 'Set Deadline'}</span>
+                  </DropdownMenuItem>
+                )}
+                {canManage && (
+                  <DropdownMenuItem
                     onClick={() => setAccessModalOpen(true)}
                     className="gap-2 text-xs cursor-pointer"
                   >
@@ -264,6 +310,12 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
       <ProjectAccessModal
         open={accessModalOpen}
         onOpenChange={setAccessModalOpen}
+        project={activeProject}
+      />
+
+      <ProjectDeadlineModal
+        open={deadlineModalOpen}
+        onOpenChange={setDeadlineModalOpen}
         project={activeProject}
       />
 

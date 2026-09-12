@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
-import { Project, Task } from '../../types/index';
-import { ExternalLink, GitBranch, LayoutDashboard, Lock, Globe } from 'lucide-react';
+import type { Project, Task } from '../../types/index';
+import { ExternalLink, GitBranch, LayoutDashboard, Lock, Globe, Calendar } from 'lucide-react';
 import { getCleanRepoDetails } from '../../lib/githubUrl';
+import { getDeadlineStatus } from '../../lib/dateUtils';
 
 interface ProjectsGridProps {
   projects: Project[];
@@ -100,6 +101,22 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({ projects, tasks, onS
                   />
                 </div>
               </div>
+
+              {/* Target Deadline */}
+              {project.deadline && (() => {
+                const deadlineStatus = getDeadlineStatus(project.deadline);
+                return (
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      <span>Target Deadline</span>
+                    </span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${deadlineStatus.badgeClass}`}>
+                      {deadlineStatus.formattedDate} ({deadlineStatus.label})
+                    </span>
+                  </div>
+                );
+              })()}
             </CardContent>
             <CardFooter>
               <Button

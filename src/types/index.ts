@@ -62,6 +62,8 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
+  deadline?: string;
+  startDate?: string;
   visibility?: ProjectVisibility;
   owner?: string;
   allowedUsers?: string[];
