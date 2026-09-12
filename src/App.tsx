@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
@@ -31,8 +32,12 @@ function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
+=======
+import LandingPage from './pages/LandingPage';
+>>>>>>> feature/analytics-sync
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Main Navigation Bar */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border/80 bg-background/95 px-3 sm:px-6 backdrop-blur-md">
@@ -198,6 +203,9 @@ function MainApp() {
         </main>
       )}
     </div>
+=======
+    <LandingPage />
+>>>>>>> feature/analytics-sync
   );
 }
 
