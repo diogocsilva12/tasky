@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  /* Modern Dark (default dark) */
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 71% 6%;
+    --card-foreground: 213 31% 91%;
+    --popover: 224 71% 6%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 224 76.3% 48%;
+  }
+
+  /* Slate Theme */
+  .theme-slate {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 217 33% 17%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 22%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 199 89% 48%;
+  }
+
+  /* Midnight Navy Theme */
+  .theme-midnight {
+    --background: 230 35% 7%;
+    --foreground: 220 25% 95%;
+    --card: 230 30% 12%;
+    --card-foreground: 220 25% 95%;
+    --popover: 230 30% 12%;
+    --popover-foreground: 220 25% 95%;
+    --primary: 235 86% 65%;
+    --primary-foreground: 230 35% 7%;
+    --secondary: 230 25% 18%;
+    --secondary-foreground: 220 25% 95%;
+    --muted: 230 25% 18%;
+    --muted-foreground: 225 15% 65%;
+    --accent: 230 30% 22%;
+    --accent-foreground: 220 25% 95%;
+    --destructive: 350 70% 50%;
+    --destructive-foreground: 220 25% 95%;
+    --border: 230 25% 20%;
+    --input: 230 25% 20%;
+    --ring: 235 86% 65%;
+  }
+
+  /* Zinc Monochrome Theme */
+  .theme-zinc {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 18%;
+    --input: 240 3.7% 18%;
+    --ring: 240 4.9% 83.9%;
+  }
+
+  /* Cyberpunk Violet Theme */
+  .theme-cyberpunk {
+    --background: 280 40% 6%;
+    --foreground: 280 15% 95%;
+    --card: 280 35% 11%;
+    --card-foreground: 280 15% 95%;
+    --popover: 280 35% 11%;
+    --popover-foreground: 280 15% 95%;
+    --primary: 326 100% 64%;
+    --primary-foreground: 280 40% 6%;
+    --secondary: 280 30% 18%;
+    --secondary-foreground: 280 15% 95%;
+    --muted: 280 30% 18%;
+    --muted-foreground: 280 15% 65%;
+    --accent: 174 100% 50%;
+    --accent-foreground: 280 40% 6%;
+    --destructive: 0 100% 63%;
+    --destructive-foreground: 280 15% 95%;
+    --border: 280 30% 22%;
+    --input: 280 30% 22%;
+    --ring: 326 100% 64%;
+  }
+
+  /* Monokai Theme */
+  .theme-monokai {
+    --background: 60 4% 15%;
+    --foreground: 60 30% 96%;
+    --card: 60 5% 20%;
+    --card-foreground: 60 30% 96%;
+    --popover: 60 5% 20%;
+    --popover-foreground: 60 30% 96%;
+    --primary: 80 80% 55%;
+    --primary-foreground: 60 4% 15%;
+    --secondary: 60 5% 28%;
+    --secondary-foreground: 60 30% 96%;
+    --muted: 60 5% 28%;
+    --muted-foreground: 60 10% 70%;
+    --accent: 38 90% 55%;
+    --accent-foreground: 60 4% 15%;
+    --destructive: 345 95% 60%;
+    --destructive-foreground: 60 30% 96%;
+    --border: 60 5% 26%;
+    --input: 60 5% 26%;
+    --ring: 80 80% 55%;
+  }
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Custom scrollbars for clean minimalist look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.45);
+}
