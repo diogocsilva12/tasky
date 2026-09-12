@@ -83,7 +83,14 @@ export const DeviceAuthModal: React.FC<DeviceAuthModalProps> = ({
       }
     } catch (err: any) {
       if (pollingRef.current) {
-        setError(err.message || 'GitHub device authorization failed.');
+        const msg = err.message || '';
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('cors')) {
+          setError(
+            "GitHub's OAuth endpoint does not send CORS headers to static web pages, blocking browser-direct device flow requests. You can either configure a CORS proxy in Settings below or use your GitHub Token directly."
+          );
+        } else {
+          setError(msg || 'GitHub device authorization failed.');
+        }
         setStatus('error');
       }
     }

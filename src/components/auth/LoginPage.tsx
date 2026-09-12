@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { DeviceAuthModal } from './DeviceAuthModal';
 import { GithubIcon } from '../icons/GithubIcon';
-import { Key, AlertCircle, ExternalLink, ShieldCheck, Sparkles } from 'lucide-react';
+import { AlertCircle, ExternalLink, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { loginWithToken, loginDemo } = useAuth();
@@ -67,20 +67,20 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Solution 2: PAT Token Fallback */}
+          {/* Solution 2: PAT Token */}
           <form onSubmit={handleLogin} className="space-y-3">
             <div className="space-y-1.5">
               <Input
                 id="token"
                 type="password"
-                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                placeholder="ghp_... or gho_..."
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 className="h-10 text-sm font-mono"
               />
               <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
-                <span className="flex items-center gap-1">
-                  <Key className="h-3 w-3" /> Scopes: repo, project, gist
+                <span className="flex items-center gap-1 font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded border">
+                  Terminal: gh auth token
                 </span>
                 <a
                   href="https://github.com/settings/tokens/new?scopes=repo,project,gist&description=Tasky+Access+Token"
@@ -88,7 +88,7 @@ export const LoginPage: React.FC = () => {
                   rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-0.5 font-medium"
                 >
-                  <span>Generate token</span>
+                  <span>Create new PAT</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
