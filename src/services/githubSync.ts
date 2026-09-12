@@ -6,6 +6,7 @@ export interface GithubIssue {
   title: string;
   body: string;
   state: 'open' | 'closed';
+  user?: { login: string; avatar_url: string };
   assignees: Array<{ login: string; avatar_url: string; name?: string }>;
   labels: Array<{ name: string }>;
   created_at: string;
@@ -55,6 +56,7 @@ export class GithubSyncEngine {
     return {
       id: `issue-${issue.number}`,
       projectId,
+      creator: issue.user ? { username: issue.user.login, avatarUrl: issue.user.avatar_url } : undefined,
       title: issue.title,
       description: issue.body || '',
       columnId: issue.state === 'closed' ? 'done' : 'todo', // basic mapping, can be refined based on project state

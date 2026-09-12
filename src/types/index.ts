@@ -22,6 +22,14 @@ export interface TaskComment {
   createdAt: string;
 }
 
+export interface TaskActivity {
+  id: string;
+  actor?: Assignee;
+  at: string;
+  action: string;
+  changes: { field: string; before: string; after: string }[];
+}
+
 export interface Task {
   id: string;
   projectId: string;
@@ -30,6 +38,8 @@ export interface Task {
   columnId: string;
   priority: Priority;
   assignees: Assignee[];
+  creator?: Assignee;
+  activity?: TaskActivity[];
   githubIssueNumber?: number;
   githubPrNumber?: number;
   prStatus?: PrStatus;
@@ -87,6 +97,7 @@ export interface BoardFilter {
   tag?: string | 'ALL';
   milestone?: string | 'ALL';
   onlyBlocked?: boolean;
+  onlyOverdue?: boolean;
 }
 
 export interface PassListEntry {

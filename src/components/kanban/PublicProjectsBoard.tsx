@@ -7,6 +7,10 @@ import { getFilteredTasks, useBoardStore } from '@/store/boardStore';
 import { buildPublicBoard, getPublicProjects, resolvePublicBoardColumn, type PublicBoardColumn } from '@/lib/publicBoard';
 import { BoardFilters } from './BoardFilters';
 import { TaskCard } from './TaskCard';
+import { SavedViews } from './SavedViews';
+import { QuickCreateTask } from './QuickCreateTask';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
 import { TaskModal } from './TaskModal';
 
 function PublicColumn({ column, projects, onEdit, onOpenProject }: {
@@ -44,6 +48,8 @@ function PublicColumn({ column, projects, onEdit, onOpenProject }: {
 }
 
 export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (projectId: string) => void }) {
+  const { user } = useAuth();
+  const [creating, setCreating] = useState(false);
   const { projects, tasks, filter, moveTask } = useBoardStore();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
@@ -82,7 +88,7 @@ export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (project
   return (
     <>
       <div className="px-4 sm:px-6 py-5 border-b border-border/70">
-        <h1 className="text-xl font-bold">All public projects</h1>
+<div className="flex items-center justify-between gap-3"><h1 className="text-xl font-bold">All public projects</h1><Button onClick={() => setCreating(true)} disabled={!allPublicProjects.length}>New task</Button></div>
         <p className="mt-1 text-sm text-muted-foreground">{publicProjects.length} projects · {publicTasks.length} tasks · {filteredTasks.length} shown</p>
       </div>
       <fieldset className="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-3 border-b border-border/70">
@@ -104,6 +110,7 @@ export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (project
           </label>
         ))}
       </fieldset>
+      <SavedViews key={user?.username} username={user?.username || 'anonymous'} projectIds={selectedProjectIds} onProjectIdsChange={setSelectedProjectIds} />
       <BoardFilters tasks={publicTasks} />
       <main className="flex-1 min-w-0 bg-background/40">
         {publicTasks.length === 0 || filteredTasks.length === 0 ? (
@@ -122,6 +129,7 @@ export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (project
           </DragOverlay>
         </DndContext>
       </main>
+      {creating && <QuickCreateTask projects={allPublicProjects} onClose={() => setCreating(false)} />}
       {editingTask && editingProject && (
         <TaskModal key={editingTask.id} open onOpenChange={(open) => { if (!open) setEditingTaskId(null); }} projectId={editingProject.id} columns={editingProject.columns} taskToEdit={editingTask} defaultBranch={editingProject.activeBranch || editingProject.defaultBranch} />
       )}

@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { boardStore } from '@/store/boardStore';
 import { BranchCommitsModal } from './BranchCommitsModal';
+import { TaskActivityModal } from './TaskActivityModal';
 import { TaskCommentsModal } from './TaskCommentsModal';
 import {
   GitBranch,
@@ -37,6 +38,7 @@ import {
   GitMerge,
   Milestone,
   MessageSquare,
+  History,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -88,6 +90,7 @@ export function TaskCard({
     transition,
   };
 
+  const [activityOpen, setActivityOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [commitsModalOpen, setCommitsModalOpen] = useState(false);
   const [commentsModalOpen, setCommentsModalOpen] = useState(false);
@@ -133,6 +136,10 @@ export function TaskCard({
         }`}
         onClick={() => onEdit?.(task)}
       >
+        <div className="flex items-center gap-1.5 mb-2 text-[10px] text-muted-foreground" title={task.creator ? `Created by @${task.creator.username}` : 'Creator not recorded for this task'}>
+          <Avatar className="h-6 w-6 border border-border"><AvatarImage src={task.creator?.avatarUrl || (task.creator ? `https://github.com/${task.creator.username}.png` : undefined)} alt={task.creator ? `Creator ${task.creator.username}` : 'Creator unknown'} /><AvatarFallback>{task.creator?.username.slice(0, 2).toUpperCase() || '?'}</AvatarFallback></Avatar>
+          <span>{task.creator ? `Created by @${task.creator.username}` : 'Creator unknown'}</span>
+        </div>
         {/* Top row: Priority badge, Blocked badge, Story Points, PR badge, Milestone, Issue #, Dropdown */}
         <div className="flex items-center justify-between gap-1.5 pb-2">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -250,6 +257,10 @@ export function TaskCard({
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span>Comments Thread {task.comments?.length ? `(${task.comments.length})` : ''}</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => setActivityOpen(true)} className="gap-2 text-xs cursor-pointer">
+                  <History className="h-3.5 w-3.5" /><span>Activity history</span>
                 </DropdownMenuItem>
 
                 {projectColumns.length > 1 && (
@@ -448,6 +459,8 @@ export function TaskCard({
           )}
         </div>
       </div>
+
+      <TaskActivityModal taskId={task.id} open={activityOpen} onOpenChange={setActivityOpen} />
 
       {/* Confirmation Dialog for Deletion */}
       <ConfirmDialog

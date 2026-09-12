@@ -35,7 +35,7 @@ export function BoardFilters({ tasks }: { tasks?: Task[] }) {
     filter.assignee !== 'ALL' ||
     (filter.tag && filter.tag !== 'ALL') ||
     (filter.milestone && filter.milestone !== 'ALL') ||
-    Boolean(filter.onlyBlocked);
+    Boolean(filter.onlyBlocked) || Boolean(filter.onlyOverdue);
 
   // Calculate count per priority for current project tasks
   const getPriorityCount = (p: Priority | 'ALL') => {
@@ -108,6 +108,8 @@ export function BoardFilters({ tasks }: { tasks?: Task[] }) {
           <span>Blocked</span>
           <span className="text-[10px] opacity-80">({blockedCount})</span>
         </button>
+
+        <button type="button" aria-pressed={Boolean(filter.onlyOverdue)} onClick={() => setFilter({ onlyOverdue: !filter.onlyOverdue })} className="rounded-lg border border-border px-2.5 py-1 text-xs aria-pressed:bg-destructive aria-pressed:text-destructive-foreground">Overdue</button>
 
         {/* Assignee Filter Dropdown */}
         <DropdownMenu>

@@ -18,7 +18,7 @@ import { ExportModal } from './components/export/ExportModal';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
-import { useBoardStore } from './store/boardStore';
+import { boardStore, useBoardStore } from './store/boardStore';
 import { canUserAccessProject, getAccessibleProjects } from './lib/projectAccess';
 import { GithubIcon } from './components/icons/GithubIcon';
 import type { Task } from './types';
@@ -32,13 +32,14 @@ import {
   Lock,
   Command,
   Share2,
+  Undo2,
 } from 'lucide-react';
 
 type ActiveView = 'public-board' | 'board' | 'timeline' | 'resume' | 'admin';
 
 function MainApp() {
   const { user, authState, logout } = useAuth();
-  const { projects, activeProject, setActiveProject, resetFilter } = useBoardStore();
+  const { projects, activeProject, setActiveProject, resetFilter, undo, undoLabel } = useBoardStore();
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
@@ -46,6 +47,11 @@ function MainApp() {
   const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedTaskForBoard, setSelectedTaskForBoard] = useState<Task | null>(null);
+
+  useEffect(() => {
+    boardStore.setActor(user ? { username: user.username, name: user.name || undefined, avatarUrl: user.avatarUrl } : undefined);
+    return () => boardStore.setActor(undefined);
+  }, [user?.username, user?.name, user?.avatarUrl]);
 
   const isAdmin = authState === 'admin' || user?.role === 'super-admin' || user?.role === 'admin';
   const accessibleProjects = getAccessibleProjects(projects, user);
@@ -139,6 +145,9 @@ function MainApp() {
 
         {/* Right Nav Utilities */}
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" disabled={!undoLabel} onClick={undo} title={undoLabel ? `Undo: ${undoLabel}` : 'No task actions to undo'} aria-label={undoLabel ? `Undo: ${undoLabel}` : 'Undo'} className="gap-1">
+            <Undo2 className="h-4 w-4" /><span className="hidden sm:inline">Undo</span>
+          </Button>
           {/* Spotlight / Command Palette trigger */}
           <Button
             variant="outline"

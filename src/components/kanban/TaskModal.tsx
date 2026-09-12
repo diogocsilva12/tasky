@@ -290,6 +290,7 @@ export function TaskModal({
     } else {
       boardStore.addTask({
         projectId,
+        creator: user ? { username: user.username, name: user.name || undefined, avatarUrl: user.avatarUrl } : undefined,
         ...taskPayload,
       });
     }

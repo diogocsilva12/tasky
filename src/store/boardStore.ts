@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import type { Project, Column, Task, BoardFilter } from '@/types';
+import type { Project, Column, Task, BoardFilter, Assignee } from '@/types';
+import { makeTaskActivity } from '@/lib/taskActivity';
 import { getCleanRepoDetails } from '@/lib/githubUrl';
 import { isInProgressColumn, isDoneColumn } from '@/lib/taskMetrics';
 
@@ -409,12 +410,56 @@ function saveState(state: BoardState): void {
 let currentState: BoardState = loadInitialState();
 const listeners = new Set<() => void>();
 
-function emitChange(): void {
+let actor: Assignee | undefined;
+let previousTasks = structuredClone(currentState.tasks);
+let previousProjects = JSON.stringify(currentState.projects);
+const taskContent = (task: Task) => JSON.stringify({ ...task, activity: undefined, updatedAt: undefined });
+const undoStack: { label: string; tasks: Task[] }[] = [];
+
+function emitChange(action?: string): void {
+  if (previousProjects !== JSON.stringify(currentState.projects)) undoStack.length = 0;
+  previousProjects = JSON.stringify(currentState.projects);
+  const tasksChanged = JSON.stringify(previousTasks) !== JSON.stringify(currentState.tasks);
+  if (tasksChanged && action) {
+    undoStack.push({ label: action, tasks: previousTasks });
+    if (undoStack.length > 30) undoStack.shift();
+    const beforeById = new Map(previousTasks.map((task) => [task.id, task]));
+    currentState = { ...currentState, tasks: currentState.tasks.map((task) => {
+      const before = beforeById.get(task.id);
+      if (JSON.stringify(before) === JSON.stringify(task)) return task;
+      const entry = makeTaskActivity(action, actor, before, task, currentState.projects);
+      return { ...task, activity: [...(before?.activity || task.activity || []), entry] };
+    }) };
+  } else if (tasksChanged) {
+    undoStack.length = 0;
+  }
+  previousTasks = structuredClone(currentState.tasks);
   saveState(currentState);
   listeners.forEach((listener) => listener());
 }
 
 export const boardStore = {
+  setActor(person?: Assignee): void {
+    const changedUser = actor?.username !== person?.username;
+    if (changedUser) undoStack.length = 0;
+    actor = person ? { username: person.username, name: person.name, avatarUrl: person.avatarUrl } : undefined;
+    if (changedUser) { currentState = { ...currentState }; emitChange(); }
+  },
+
+  undo(): void {
+    const operation = undoStack.pop();
+    if (!operation) return;
+    const current = new Map(currentState.tasks.map((task) => [task.id, task]));
+    const tasks = operation.tasks.map((task) => {
+      const latest = current.get(task.id);
+      if (latest && taskContent(latest) === taskContent(task)) return latest;
+      const entry = makeTaskActivity(`Undid: ${operation.label}`, actor, latest, task, currentState.projects);
+      return { ...task, activity: [...(latest?.activity || task.activity || []), entry], updatedAt: entry.at };
+    });
+    currentState = { ...currentState, tasks };
+    previousTasks = structuredClone(tasks);
+    emitChange();
+  },
   getState(): BoardState {
     return currentState;
   },
@@ -651,6 +696,7 @@ export const boardStore = {
 
     const newTask: Task = {
       ...taskData,
+      creator: taskData.creator || actor,
       id,
       githubUrl,
       createdAt: now,
@@ -661,8 +707,8 @@ export const boardStore = {
       ...currentState,
       tasks: [...currentState.tasks, newTask],
     };
-    emitChange();
-    return newTask;
+    emitChange('Created task');
+    return currentState.tasks.find((task) => task.id === id)!;
   },
 
   updateTask(id: string, updates: Partial<Task>): void {
@@ -671,7 +717,7 @@ export const boardStore = {
       ...currentState,
       tasks: currentState.tasks.map((t) => {
         if (t.id !== id) return t;
-        const updated = { ...t, ...updates, updatedAt: now };
+        const updated = { ...t, ...updates, creator: t.creator || updates.creator, updatedAt: now };
         const project = currentState.projects.find((p) => p.id === updated.projectId);
         if (
           project?.repoOwner &&
@@ -700,7 +746,7 @@ export const boardStore = {
         return updated;
       }),
     };
-    emitChange();
+    emitChange('Edited task');
   },
 
   deleteTask(id: string): void {
@@ -708,7 +754,7 @@ export const boardStore = {
       ...currentState,
       tasks: currentState.tasks.filter((t) => t.id !== id),
     };
-    emitChange();
+    emitChange('Deleted task');
   },
 
   toggleSubtask(taskId: string, subtaskId: string): void {
@@ -723,7 +769,7 @@ export const boardStore = {
         return { ...t, subtasks, updatedAt: now };
       }),
     };
-    emitChange();
+    emitChange('Updated subtask');
   },
 
   addSubtask(taskId: string, title: string): void {
@@ -743,7 +789,7 @@ export const boardStore = {
         return { ...t, subtasks, updatedAt: now };
       }),
     };
-    emitChange();
+    emitChange('Added subtask');
   },
 
   removeSubtask(taskId: string, subtaskId: string): void {
@@ -756,7 +802,7 @@ export const boardStore = {
         return { ...t, subtasks, updatedAt: now };
       }),
     };
-    emitChange();
+    emitChange('Removed subtask');
   },
 
   addComment(taskId: string, content: string, author: string = 'diogocsilva12', avatarUrl?: string): void {
@@ -778,7 +824,7 @@ export const boardStore = {
         return { ...t, comments, updatedAt: now };
       }),
     };
-    emitChange();
+    emitChange('Added comment');
   },
 
   deleteComment(taskId: string, commentId: string): void {
@@ -791,7 +837,7 @@ export const boardStore = {
         return { ...t, comments, updatedAt: now };
       }),
     };
-    emitChange();
+    emitChange('Deleted comment');
   },
 
   moveTask(taskId: string, targetColumnId: string, targetIndex?: number): void {
@@ -850,7 +896,7 @@ export const boardStore = {
       ...currentState,
       tasks: [...otherTasksExcludingTarget, ...newTargetList],
     };
-    emitChange();
+    emitChange('Moved task');
   },
 
   reorderTasks(columnId: string, taskIds: string[]): void {
@@ -871,7 +917,7 @@ export const boardStore = {
         ...reorderedInColumn.map((t) => ({ ...t, updatedAt: now })),
       ],
     };
-    emitChange();
+    emitChange('Reordered tasks');
   },
 
   // ---------------- Filters ----------------
@@ -896,6 +942,7 @@ export const boardStore = {
 
   // ---------------- Sample Data Reset ----------------
   resetToSampleData(): void {
+    undoStack.length = 0;
     currentState = {
       projects: INITIAL_PROJECTS,
       activeProjectId: INITIAL_PROJECTS[0].id,
@@ -957,6 +1004,13 @@ export function getFilteredTasks(
       }
     }
 
+    if (filter.onlyOverdue) {
+      const project = currentState.projects.find((p) => p.id === task.projectId);
+      const column = project?.columns.find((c) => c.id === task.columnId);
+      const done = Boolean(task.completedAt) || isDoneColumn(column?.title || task.columnId) || /complete/i.test(column?.title || '');
+      if (!task.dueDate || new Date(task.dueDate + 'T23:59:59').getTime() >= Date.now() || done) return false;
+    }
+
     // Blocker filter
     if (filter.onlyBlocked && !task.isBlocked) {
       return false;
@@ -1007,6 +1061,8 @@ export function useBoardStore() {
 
   return {
     ...state,
+    undo: boardStore.undo,
+    undoLabel: undoStack.at(-1)?.label,
     activeProject,
     activeProjectTasks,
     filteredTasks,

@@ -8,7 +8,6 @@ import {
   KeyboardSensor,
   closestCorners,
   type DragStartEvent,
-  type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -113,40 +112,6 @@ export function KanbanBoard({
     }
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeData = active.data.current;
-    const overData = over.data.current;
-
-    // Moving tasks between different columns during drag
-    if (activeData?.type === 'Task') {
-      const draggedTask = activeData.task as Task;
-      const overId = over.id as string;
-
-      let targetColumnId: string | null = null;
-
-      if (overData?.type === 'Column') {
-        targetColumnId = overId;
-      } else if (overData?.type === 'Task') {
-        targetColumnId = (overData.task as Task).columnId;
-      }
-
-      if (targetColumnId && draggedTask.columnId !== targetColumnId) {
-        const columnTasks = tasksByColumn.get(targetColumnId) || [];
-        let targetIndex = columnTasks.length;
-        if (overData?.type === 'Task') {
-          const index = columnTasks.findIndex((t) => t.id === overId);
-          if (index !== -1) targetIndex = index;
-        }
-
-        moveTask(draggedTask.id, targetColumnId, targetIndex);
-        draggedTask.columnId = targetColumnId;
-      }
-    }
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveColumn(null);
@@ -221,7 +186,6 @@ export function KanbanBoard({
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="flex-1 overflow-x-auto p-4 sm:p-6">
