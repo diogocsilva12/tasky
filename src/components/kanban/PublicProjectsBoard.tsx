@@ -47,7 +47,9 @@ export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (project
   const { projects, tasks, filter, moveTask } = useBoardStore();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const publicProjects = getPublicProjects(projects);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[] | null>(null);
+  const allPublicProjects = getPublicProjects(projects);
+  const publicProjects = getPublicProjects(projects, selectedProjectIds);
   const publicIds = new Set(publicProjects.map((project) => project.id));
   const publicTasks = tasks.filter((task) => publicIds.has(task.projectId));
   const filteredTasks = publicProjects.flatMap((project) => getFilteredTasks(publicTasks, project.id, filter));
@@ -69,7 +71,7 @@ export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (project
     if (!task || !destination) return;
     const targetColumnId = resolvePublicBoardColumn(publicProjects, task, destination.id);
     if (!targetColumnId) {
-      toast.info(`This task's project has no ${destination.title} column. Use the card menu to choose one of its columns.`);
+      toast.info(`Choose a source column from the card menu: ${destination.title} has either no matching column or multiple matching columns in this project.`);
       return;
     }
     const targetTasks = tasks.filter((candidate) => candidate.id !== task.id && candidate.projectId === task.projectId && candidate.columnId === targetColumnId);
@@ -83,11 +85,30 @@ export function PublicProjectsBoard({ onOpenProject }: { onOpenProject: (project
         <h1 className="text-xl font-bold">All public projects</h1>
         <p className="mt-1 text-sm text-muted-foreground">{publicProjects.length} projects · {publicTasks.length} tasks · {filteredTasks.length} shown</p>
       </div>
+      <fieldset className="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-3 border-b border-border/70">
+        <legend className="sr-only">Filter public projects</legend>
+        <span className="text-xs font-semibold">Projects</span>
+        <button type="button" aria-pressed={selectedProjectIds === null} onClick={() => setSelectedProjectIds(null)} className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-accent aria-pressed:bg-primary aria-pressed:text-primary-foreground">
+          All projects
+        </button>
+        {allPublicProjects.map((project) => (
+          <label key={project.id} className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs cursor-pointer hover:bg-accent">
+            <input type="checkbox" checked={selectedProjectIds === null || selectedProjectIds.includes(project.id)} onChange={(event) => {
+              const checked = event.target.checked;
+              setSelectedProjectIds((previous) => {
+                const selected = previous ?? allPublicProjects.map((candidate) => candidate.id);
+                return checked ? [...new Set([...selected, project.id])] : selected.filter((id) => id !== project.id);
+              });
+            }} />
+            {project.name}
+          </label>
+        ))}
+      </fieldset>
       <BoardFilters tasks={publicTasks} />
       <main className="flex-1 min-w-0 bg-background/40">
         {publicTasks.length === 0 || filteredTasks.length === 0 ? (
           <p className="p-8 text-center text-muted-foreground">
-            {publicProjects.length === 0 ? 'No public projects yet. Create or import a public project to see its tasks here.' : publicTasks.length === 0 ? 'No tasks in public projects yet.' : 'No tasks match your filters.'}
+            {allPublicProjects.length === 0 ? 'No public projects yet. Create or import a public project to see its tasks here.' : publicProjects.length === 0 ? 'No projects selected. Select a project or choose All projects.' : publicTasks.length === 0 ? 'No tasks in public projects yet.' : 'No tasks match your filters.'}
           </p>
         ) : null}
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={({ active }) => setDraggingTaskId(String(active.id))} onDragCancel={() => setDraggingTaskId(null)} onDragEnd={handleDragEnd}>

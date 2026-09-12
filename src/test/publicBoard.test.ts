@@ -51,3 +51,50 @@ describe('All public projects board', () => {
     expect(buildPublicBoard(hidden, tasks)).toEqual([]);
   });
 });
+
+describe('Public project selection and unified statuses', () => {
+  it('supports multiple, single, empty, and all-project selections without exposing private projects', () => {
+    expect(getPublicProjects(projects, ['a', 'b', 'private']).map((project) => project.id)).toEqual(['a', 'b']);
+    const selected = getPublicProjects(projects, ['b']);
+    expect(buildPublicBoard(selected, tasks).flatMap((column) => column.tasks).map((task) => task.id).sort()).toEqual(['b1', 'b2', 'missing']);
+    expect(getPublicProjects(projects, [])).toEqual([]);
+    expect(getPublicProjects(projects, ['deleted', 'private'])).toEqual([]);
+    expect(getPublicProjects(projects, null)).toHaveLength(2);
+  });
+
+  const workflows: Project[] = [
+    { ...projects[0], columns: [
+      { id: 'a-done', title: 'Shipped', order: 0 },
+      { id: 'a-dev', title: 'In Development', order: 1 },
+      { id: 'a-todo', title: 'To Do', order: 2 },
+      { id: 'a-review', title: 'QA & Review', order: 3 },
+      { id: 'a-custom', title: 'Not Done Yet', order: 4 },
+    ] },
+    { ...projects[1], columns: [
+      { id: 'b-dev', title: ' in-progress ', order: 0 },
+      { id: 'b-done', title: 'Completed', order: 1 },
+      { id: 'b-review', title: 'Review', order: 2 },
+    ] },
+  ];
+
+  it('groups known aliases in workflow order while retaining unknown custom stages', () => {
+    const columns = buildPublicBoard(workflows, [task('a-dev-task', 'a', 'a-dev'), task('b-dev-task', 'b', 'b-dev')]);
+    expect(columns.map((column) => column.title)).toEqual(['To Do', 'In Progress', 'Review', 'Done', 'Not Done Yet']);
+    expect(columns[1].tasks.map((task) => task.id)).toEqual(['a-dev-task', 'b-dev-task']);
+    expect(workflows[0].columns[1].title).toBe('In Development');
+  });
+
+  it('resolves unified drops to each project’s actual column', () => {
+    const columns = buildPublicBoard(workflows, []);
+    const done = columns.find((column) => column.title === 'Done')!;
+    expect(resolvePublicBoardColumn(workflows, task('a', 'a', 'a-dev'), done.id)).toBe('a-done');
+    expect(resolvePublicBoardColumn(workflows, task('b', 'b', 'b-dev'), done.id)).toBe('b-done');
+  });
+
+  it('preserves the current stage within a status and rejects ambiguous stage changes', () => {
+    const ambiguous: Project[] = [{ ...workflows[0], columns: [...workflows[0].columns, { id: 'a-testing', title: 'Testing', order: 5 }] }];
+    const review = buildPublicBoard(ambiguous, []).find((column) => column.title === 'Review')!;
+    expect(resolvePublicBoardColumn(ambiguous, task('existing', 'a', 'a-testing'), review.id)).toBe('a-testing');
+    expect(resolvePublicBoardColumn(ambiguous, task('new', 'a', 'a-dev'), review.id)).toBeUndefined();
+  });
+});
