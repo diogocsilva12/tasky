@@ -43,6 +43,9 @@ export interface Task {
   tags?: string[];
   dueDate?: string;
   storyPoints?: number;
+  sprintId?: string;
+  startedAt?: string;
+  completedAt?: string;
   comments?: TaskComment[];
   createdAt: string;
   updatedAt: string;
@@ -78,12 +81,29 @@ export interface Project {
   updatedAt: string;
 }
 
+export type SprintStatus = 'planned' | 'active' | 'completed';
+
+export interface Sprint {
+  id: string;
+  projectId: string;
+  name: string;
+  goal?: string;
+  startDate: string;
+  endDate: string;
+  status: SprintStatus;
+  velocityTarget?: number;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BoardFilter {
   searchQuery: string;
   priority: Priority | 'ALL';
   assignee: string | 'ALL';
   tag?: string | 'ALL';
   milestone?: string | 'ALL';
+  sprintId?: string | 'ALL';
   onlyBlocked?: boolean;
 }
 

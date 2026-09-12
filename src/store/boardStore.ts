@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react';
-import type { Project, Column, Task, BoardFilter } from '@/types';
+import type { Project, Column, Task, BoardFilter, Sprint } from '@/types';
 import { getCleanRepoDetails } from '@/lib/githubUrl';
+import { isInProgressColumn, isDoneColumn } from '@/lib/sprintMetrics';
 
 const STORAGE_KEYS = {
   PROJECTS: 'tasky_projects_v1',
   TASKS: 'tasky_tasks_v1',
+  SPRINTS: 'tasky_sprints_v1',
   ACTIVE_PROJECT_ID: 'tasky_active_project_id_v1',
 };
 
@@ -65,6 +67,33 @@ export const INITIAL_PROJECTS: Project[] = [
   },
 ];
 
+export const INITIAL_SPRINTS: Sprint[] = [
+  {
+    id: 'sprint-core-1',
+    projectId: 'proj-core-engine',
+    name: 'Sprint 14: Core Engine Launch',
+    goal: 'Deliver bi-directional sync, PR auto-movement, and passlist gatekeeper.',
+    startDate: '2026-09-01T09:00:00.000Z',
+    endDate: '2026-09-18T18:00:00.000Z',
+    status: 'active',
+    velocityTarget: 25,
+    createdAt: '2026-09-01T09:00:00.000Z',
+    updatedAt: '2026-09-12T12:00:00.000Z',
+  },
+  {
+    id: 'sprint-core-2',
+    projectId: 'proj-core-engine',
+    name: 'Sprint 15: Automation & Webhooks',
+    goal: 'Ship real-time notifications, Webhook handlers, and AI task assistant.',
+    startDate: '2026-09-19T09:00:00.000Z',
+    endDate: '2026-10-03T18:00:00.000Z',
+    status: 'planned',
+    velocityTarget: 30,
+    createdAt: '2026-09-01T09:00:00.000Z',
+    updatedAt: '2026-09-12T12:00:00.000Z',
+  },
+];
+
 export const INITIAL_TASKS: Task[] = [
   // Tasky Core Engine Tasks
   {
@@ -74,6 +103,8 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Secure the app with GitHub Personal Access Token authentication and encrypted Gist-backed pass-list for zero-cost static hosting.',
     priority: 'P0',
     columnId: 'col-3',
+    sprintId: 'sprint-core-1',
+    startedAt: '2026-09-08T10:00:00.000Z',
     assignees: [
       { username: 'diogocsilva12', name: 'Diogo Silva', avatarUrl: 'https://github.com/diogocsilva12.png' },
     ],
@@ -110,6 +141,8 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Fluid drag-and-drop across customizable columns with collision detection, keyboard accessibility, and state persistence.',
     priority: 'P1',
     columnId: 'col-3',
+    sprintId: 'sprint-core-1',
+    startedAt: '2026-09-09T14:00:00.000Z',
     assignees: [
       { username: 'diogocsilva12', name: 'Diogo Silva', avatarUrl: 'https://github.com/diogocsilva12.png' },
     ],
@@ -194,6 +227,10 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Harmonize border contrast and popover elevations across custom theme presets.',
     priority: 'P3',
     columnId: 'col-5',
+    sprintId: 'sprint-core-1',
+    storyPoints: 3,
+    startedAt: '2026-09-07T14:00:00.000Z',
+    completedAt: '2026-09-10T15:30:00.000Z',
     assignees: [
       { username: 'alex-rivera', name: 'Alex Rivera', avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4' },
     ],
@@ -210,6 +247,10 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Automated GitHub Actions static release with base path relative routing.',
     priority: 'P4',
     columnId: 'col-5',
+    sprintId: 'sprint-core-1',
+    storyPoints: 2,
+    startedAt: '2026-09-08T09:00:00.000Z',
+    completedAt: '2026-09-09T18:00:00.000Z',
     assignees: [
       { username: 'diogocsilva12', name: 'Diogo Silva', avatarUrl: 'https://github.com/diogocsilva12.png' },
     ],
@@ -346,6 +387,7 @@ export interface BoardState {
   projects: Project[];
   activeProjectId: string;
   tasks: Task[];
+  sprints: Sprint[];
   filter: BoardFilter;
 }
 
@@ -353,6 +395,7 @@ function loadInitialState(): BoardState {
   try {
     const savedProjects = localStorage.getItem(STORAGE_KEYS.PROJECTS);
     const savedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
+    const savedSprints = localStorage.getItem(STORAGE_KEYS.SPRINTS);
     const savedActiveId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PROJECT_ID);
 
     const rawProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : INITIAL_PROJECTS;
@@ -366,6 +409,7 @@ function loadInitialState(): BoardState {
       };
     });
     const tasks: Task[] = savedTasks ? JSON.parse(savedTasks) : INITIAL_TASKS;
+    const sprints: Sprint[] = savedSprints ? JSON.parse(savedSprints) : INITIAL_SPRINTS;
     const activeProjectId: string =
       savedActiveId && projects.some((p) => p.id === savedActiveId)
         ? savedActiveId
@@ -375,6 +419,7 @@ function loadInitialState(): BoardState {
       projects,
       activeProjectId,
       tasks,
+      sprints,
       filter: { ...INITIAL_FILTER },
     };
   } catch {
@@ -382,6 +427,7 @@ function loadInitialState(): BoardState {
       projects: INITIAL_PROJECTS,
       activeProjectId: INITIAL_PROJECTS[0].id,
       tasks: INITIAL_TASKS,
+      sprints: INITIAL_SPRINTS,
       filter: { ...INITIAL_FILTER },
     };
   }
@@ -391,6 +437,7 @@ function saveState(state: BoardState): void {
   try {
     localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(state.projects));
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(state.tasks));
+    localStorage.setItem(STORAGE_KEYS.SPRINTS, JSON.stringify(state.sprints));
     localStorage.setItem(STORAGE_KEYS.ACTIVE_PROJECT_ID, state.activeProjectId);
   } catch (error) {
     console.error('Failed to save board state to localStorage:', error);
@@ -513,6 +560,136 @@ export const boardStore = {
     const project = currentState.projects.find((p) => p.id === id);
     if (!project) return;
     boardStore.updateProject(id, { deadline: deadline || undefined });
+  },
+
+  // ---------------- Sprints ----------------
+  addSprint(
+    sprintData: Omit<Sprint, 'id' | 'createdAt' | 'updatedAt'>
+  ): Sprint {
+    const id = `sprint-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const now = new Date().toISOString();
+
+    const newSprint: Sprint = {
+      ...sprintData,
+      id,
+      status: sprintData.status || 'planned',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    let updatedSprints = currentState.sprints;
+    if (newSprint.status === 'active') {
+      updatedSprints = updatedSprints.map((s) =>
+        s.projectId === sprintData.projectId && s.status === 'active'
+          ? { ...s, status: 'planned' as const, updatedAt: now }
+          : s
+      );
+    }
+
+    currentState = {
+      ...currentState,
+      sprints: [...updatedSprints, newSprint],
+    };
+    emitChange();
+    return newSprint;
+  },
+
+  updateSprint(id: string, updates: Partial<Sprint>): void {
+    const now = new Date().toISOString();
+    currentState = {
+      ...currentState,
+      sprints: currentState.sprints.map((s) =>
+        s.id === id ? { ...s, ...updates, updatedAt: now } : s
+      ),
+    };
+    emitChange();
+  },
+
+  startSprint(id: string): void {
+    const target = currentState.sprints.find((s) => s.id === id);
+    if (!target) return;
+    const now = new Date().toISOString();
+
+    currentState = {
+      ...currentState,
+      sprints: currentState.sprints.map((s) => {
+        if (s.id === id) {
+          return { ...s, status: 'active' as const, updatedAt: now };
+        }
+        if (s.projectId === target.projectId && s.status === 'active') {
+          return { ...s, status: 'completed' as const, completedAt: now, updatedAt: now };
+        }
+        return s;
+      }),
+    };
+    emitChange();
+  },
+
+  completeSprint(
+    id: string,
+    rolloverAction: 'backlog' | 'nextSprint' = 'backlog'
+  ): void {
+    const target = currentState.sprints.find((s) => s.id === id);
+    if (!target) return;
+    const now = new Date().toISOString();
+
+    let nextSprint = currentState.sprints.find(
+      (s) => s.projectId === target.projectId && s.status === 'planned' && s.id !== id
+    );
+
+    let extraSprints = currentState.sprints;
+    if (rolloverAction === 'nextSprint' && !nextSprint) {
+      const nextEndDate = new Date();
+      nextEndDate.setDate(nextEndDate.getDate() + 14);
+      const newNextSprint: Sprint = {
+        id: `sprint-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        projectId: target.projectId,
+        name: `Sprint ${(parseInt(target.name.match(/\d+/)?.[0] || '1', 10) + 1)}: Next Iteration`,
+        goal: 'Rollover & Next Iteration',
+        startDate: now,
+        endDate: nextEndDate.toISOString(),
+        status: 'active',
+        velocityTarget: target.velocityTarget || 25,
+        createdAt: now,
+        updatedAt: now,
+      };
+      extraSprints = [...extraSprints, newNextSprint];
+      nextSprint = newNextSprint;
+    }
+
+    const updatedTasks = currentState.tasks.map((t) => {
+      if (t.sprintId !== id) return t;
+      const isDone = isDoneColumn(t.columnId);
+      if (isDone) return t;
+
+      return {
+        ...t,
+        sprintId: rolloverAction === 'nextSprint' && nextSprint ? nextSprint.id : undefined,
+        updatedAt: now,
+      };
+    });
+
+    currentState = {
+      ...currentState,
+      sprints: extraSprints.map((s) =>
+        s.id === id
+          ? { ...s, status: 'completed' as const, completedAt: now, updatedAt: now }
+          : s
+      ),
+      tasks: updatedTasks,
+    };
+    emitChange();
+  },
+
+  deleteSprint(id: string): void {
+    currentState = {
+      ...currentState,
+      sprints: currentState.sprints.filter((s) => s.id !== id),
+      tasks: currentState.tasks.map((t) =>
+        t.sprintId === id ? { ...t, sprintId: undefined } : t
+      ),
+    };
+    emitChange();
   },
 
   // ---------------- Columns ----------------
@@ -791,7 +968,31 @@ export const boardStore = {
 
     const now = new Date().toISOString();
     const otherTasks = currentState.tasks.filter((t) => t.id !== taskId);
-    const updatedTask: Task = { ...task, columnId: targetColumnId, updatedAt: now };
+
+    const project = currentState.projects.find((p) => p.id === task.projectId);
+    const targetColumn = project?.columns.find((c) => c.id === targetColumnId);
+    const colName = targetColumn?.title || targetColumnId;
+
+    let startedAt = task.startedAt;
+    let completedAt = task.completedAt;
+
+    if (isInProgressColumn(colName) && !startedAt) {
+      startedAt = now;
+    }
+    if (isDoneColumn(colName)) {
+      if (!startedAt) startedAt = task.createdAt;
+      completedAt = now;
+    } else if (!isDoneColumn(colName) && completedAt) {
+      completedAt = undefined;
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      columnId: targetColumnId,
+      startedAt,
+      completedAt,
+      updatedAt: now,
+    };
 
     // Get all tasks in the target column
     const targetColumnTasks = otherTasks.filter(
@@ -867,6 +1068,7 @@ export const boardStore = {
       projects: INITIAL_PROJECTS,
       activeProjectId: INITIAL_PROJECTS[0].id,
       tasks: INITIAL_TASKS,
+      sprints: INITIAL_SPRINTS,
       filter: { ...INITIAL_FILTER },
     };
     emitChange();
@@ -929,6 +1131,18 @@ export function getFilteredTasks(
       return false;
     }
 
+    // Sprint filter
+    if (filter.sprintId && filter.sprintId !== 'ALL') {
+      if (filter.sprintId === 'active') {
+        const activeSprint = currentState.sprints.find(
+          (s) => s.projectId === activeProjectId && s.status === 'active'
+        );
+        if (!activeSprint || task.sprintId !== activeSprint.id) return false;
+      } else if (task.sprintId !== filter.sprintId) {
+        return false;
+      }
+    }
+
     return true;
   });
 }
@@ -972,10 +1186,18 @@ export function useBoardStore() {
     new Set(activeProjectTasks.map((t) => t.milestone).filter((m): m is string => Boolean(m)))
   );
 
+  const activeProjectSprints = state.sprints.filter(
+    (s) => s.projectId === state.activeProjectId
+  );
+
+  const activeSprint = activeProjectSprints.find((s) => s.status === 'active');
+
   return {
     ...state,
     activeProject,
     activeProjectTasks,
+    activeProjectSprints,
+    activeSprint,
     filteredTasks,
     projectAssignees,
     projectTags,
@@ -985,6 +1207,11 @@ export function useBoardStore() {
     updateProjectDeadline: boardStore.updateProjectDeadline,
     deleteProject: boardStore.deleteProject,
     setActiveProject: boardStore.setActiveProject,
+    addSprint: boardStore.addSprint,
+    updateSprint: boardStore.updateSprint,
+    startSprint: boardStore.startSprint,
+    completeSprint: boardStore.completeSprint,
+    deleteSprint: boardStore.deleteSprint,
     addColumn: boardStore.addColumn,
     updateColumn: boardStore.updateColumn,
     deleteColumn: boardStore.deleteColumn,

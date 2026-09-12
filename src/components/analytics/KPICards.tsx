@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Task, Project } from '../../types/index';
-import { CheckCircle, Clock, Ban, Layers } from 'lucide-react';
+import { CheckCircle, Clock, Ban, Layers, Timer, Zap } from 'lucide-react';
+import { calculateTeamMetrics } from '../../lib/sprintMetrics';
 
 interface KPICardsProps {
   tasks: Task[];
@@ -59,6 +60,8 @@ export const KPICards: React.FC<KPICardsProps> = ({ tasks, projects = [] }) => {
     return (t.isBlocked || t.priority === 'P0') && !isDone;
   }).length;
 
+  const teamMetrics = calculateTeamMetrics(tasks);
+
   const kpis = [
     {
       title: 'Total Tasks',
@@ -79,6 +82,18 @@ export const KPICards: React.FC<KPICardsProps> = ({ tasks, projects = [] }) => {
       subtext: `${completed} tasks completed`,
     },
     {
+      title: 'Avg Lead Time',
+      value: `${teamMetrics.avgLeadTimeDays}d`,
+      icon: <Timer className="h-4 w-4 text-purple-500" />,
+      subtext: `Creation to completion (${teamMetrics.cycleEfficiencyPercent}% efficiency)`,
+    },
+    {
+      title: 'Avg Cycle Time',
+      value: `${teamMetrics.avgCycleTimeDays}d`,
+      icon: <Zap className="h-4 w-4 text-amber-500" />,
+      subtext: `In dev to deployed`,
+    },
+    {
       title: 'Active Blockers & P0',
       value: activeBlockers,
       icon: <Ban className="h-4 w-4 text-red-500" />,
@@ -88,7 +103,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ tasks, projects = [] }) => {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {kpis.map((kpi, idx) => (
         <Card
           key={idx}

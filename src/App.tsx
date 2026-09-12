@@ -11,6 +11,7 @@ import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { SyncStatusButton } from './components/sync/SyncStatusButton';
 import { TimelineView } from './components/timeline/TimelineView';
+import { SprintBar } from './components/sprints/SprintBar';
 import { CommandPalette } from './components/CommandPalette';
 import { CreateProjectModal } from './components/projects/CreateProjectModal';
 import { ExportModal } from './components/export/ExportModal';
@@ -222,6 +223,7 @@ function MainApp() {
                 onOpenNewTask={() => setTaskModalOpen(true)}
                 onOpenAddColumn={() => setColumnModalOpen(true)}
               />
+              <SprintBar />
               <BoardFilters />
               <main className="flex-1 flex flex-col min-h-0 bg-background/40">
                 <KanbanBoard
@@ -268,6 +270,7 @@ function MainApp() {
                 onOpenNewTask={() => setTaskModalOpen(true)}
                 onOpenAddColumn={() => setColumnModalOpen(true)}
               />
+              <SprintBar />
               <BoardFilters />
               <main className="flex-1 flex flex-col min-h-0 bg-background/40">
                 <TimelineView
