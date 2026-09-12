@@ -16,14 +16,26 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({ projects, tasks, onS
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {projects.map(project => {
         const projectTasks = tasks.filter(t => t.projectId === project.id);
-        const completed = projectTasks.filter(t => t.columnId === 'done').length;
+        const doneColumnIds = new Set(
+          project.columns
+            .filter(
+              (c) =>
+                c.title.toLowerCase().includes('done') ||
+                c.title.toLowerCase().includes('ship') ||
+                c.title.toLowerCase().includes('finish') ||
+                c.id === 'done'
+            )
+            .map((c) => c.id)
+        );
+        const completed = projectTasks.filter((t) => doneColumnIds.has(t.columnId)).length;
         const progress = projectTasks.length > 0 ? Math.round((completed / projectTasks.length) * 100) : 0;
+        const blockedCount = projectTasks.filter((t) => t.isBlocked).length;
 
         const repoDetails = getCleanRepoDetails(project);
         const branchUrl = repoDetails.branchUrl();
 
         return (
-          <Card key={project.id} className="flex flex-col">
+          <Card key={project.id} className="flex flex-col bg-card/85 backdrop-blur-md border-border/70 hover:shadow-md transition-all">
             <CardHeader>
               <CardTitle className="flex justify-between items-start">
                 <span className="truncate">{project.name}</span>
@@ -41,21 +53,28 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({ projects, tasks, onS
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 space-y-4">
-              <div className="flex items-center text-sm text-muted-foreground">
-                <GitBranch className="w-4 h-4 mr-2" />
-                {branchUrl ? (
-                  <a
-                    href={branchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-primary transition-colors inline-flex items-center gap-1"
-                    title="Open branch on GitHub"
-                  >
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center">
+                  <GitBranch className="w-4 h-4 mr-2" />
+                  {branchUrl ? (
+                    <a
+                      href={branchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors inline-flex items-center gap-1"
+                      title="Open branch on GitHub"
+                    >
+                      <span>{project.activeBranch || project.defaultBranch || 'main'}</span>
+                      <ExternalLink className="w-3 h-3 opacity-60" />
+                    </a>
+                  ) : (
                     <span>{project.activeBranch || project.defaultBranch || 'main'}</span>
-                    <ExternalLink className="w-3 h-3 opacity-60" />
-                  </a>
-                ) : (
-                  <span>{project.activeBranch || project.defaultBranch || 'main'}</span>
+                  )}
+                </div>
+                {blockedCount > 0 && (
+                  <span className="text-xs text-red-600 dark:text-red-400 font-semibold">
+                    {blockedCount} blocked
+                  </span>
                 )}
               </div>
               <div className="space-y-1">

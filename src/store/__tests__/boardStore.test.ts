@@ -179,4 +179,44 @@ describe('boardStore', () => {
       )
     ).toBe(true);
   });
+
+  it('supports task blockers and onlyBlocked filter', () => {
+    const activeId = boardStore.getState().activeProjectId;
+    const targetCol = boardStore.getState().projects[0].columns[0].id;
+
+    const blockedTask = boardStore.addTask({
+      projectId: activeId,
+      columnId: targetCol,
+      title: 'Database schema migration',
+      priority: 'P1',
+      assignees: [{ username: 'diogocsilva12' }],
+      isBlocked: true,
+      blockerReason: 'Waiting for DBA sign-off on table locks',
+    });
+
+    let state = boardStore.getState();
+    const stored = state.tasks.find((t) => t.id === blockedTask.id);
+    expect(stored?.isBlocked).toBe(true);
+    expect(stored?.blockerReason).toBe('Waiting for DBA sign-off on table locks');
+
+    // Filter by onlyBlocked: true
+    const onlyBlockedTasks = getFilteredTasks(state.tasks, activeId, {
+      searchQuery: '',
+      priority: 'ALL',
+      assignee: 'ALL',
+      onlyBlocked: true,
+    });
+    expect(onlyBlockedTasks.length).toBeGreaterThanOrEqual(1);
+    expect(onlyBlockedTasks.every((t) => t.isBlocked)).toBe(true);
+    expect(onlyBlockedTasks.some((t) => t.id === blockedTask.id)).toBe(true);
+
+    // Unblock the task
+    boardStore.updateTask(blockedTask.id, {
+      isBlocked: false,
+      blockerReason: undefined,
+    });
+    state = boardStore.getState();
+    const unblocked = state.tasks.find((t) => t.id === blockedTask.id);
+    expect(unblocked?.isBlocked).toBe(false);
+  });
 });

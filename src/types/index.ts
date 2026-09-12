@@ -18,6 +18,8 @@ export interface Task {
   githubItemId?: string;
   githubUrl?: string;
   branchName?: string;
+  isBlocked?: boolean;
+  blockerReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +50,7 @@ export interface BoardFilter {
   searchQuery: string;
   priority: Priority | 'ALL';
   assignee: string | 'ALL';
+  onlyBlocked?: boolean;
 }
 
 export interface PassListEntry {

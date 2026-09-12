@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { RefreshCw, Check, X, Shield, Users, UserPlus } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -24,6 +25,8 @@ export const AdminPage: React.FC = () => {
   const [newUsername, setNewUsername] = useState('');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userToRevoke, setUserToRevoke] = useState<string | null>(null);
+  const [requestToReject, setRequestToReject] = useState<string | null>(null);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -144,7 +147,11 @@ export const AdminPage: React.FC = () => {
                         {user.role}
                       </Badge>
                       {user.username.toLowerCase() !== 'diogocsilva12' && (
-                        <Button variant="destructive" size="sm" onClick={() => revokeUserFromPassList(user.username)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setUserToRevoke(user.username)}
+                        >
                           Revoke
                         </Button>
                       )}
@@ -182,10 +189,22 @@ export const AdminPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="icon" className="text-green-600 hover:text-green-700" onClick={() => approveRequest(request.username)}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => approveRequest(request.username)}
+                          title="Approve access"
+                        >
                           <Check className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="icon" className="text-red-600 hover:text-red-700" onClick={() => rejectRequest(request.username)}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => setRequestToReject(request.username)}
+                          title="Reject request"
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
@@ -197,6 +216,38 @@ export const AdminPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Revoke Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(userToRevoke)}
+        onOpenChange={(open) => !open && setUserToRevoke(null)}
+        title="Revoke User Access"
+        description={`Are you sure you want to revoke access for @${userToRevoke}? They will immediately lose access to Tasky boards.`}
+        confirmText="Revoke Access"
+        destructive
+        onConfirm={() => {
+          if (userToRevoke) {
+            revokeUserFromPassList(userToRevoke);
+            setUserToRevoke(null);
+          }
+        }}
+      />
+
+      {/* Reject Request Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(requestToReject)}
+        onOpenChange={(open) => !open && setRequestToReject(null)}
+        title="Reject Access Request"
+        description={`Are you sure you want to reject the access request from @${requestToReject}?`}
+        confirmText="Reject Request"
+        destructive
+        onConfirm={() => {
+          if (requestToReject) {
+            rejectRequest(requestToReject);
+            setRequestToReject(null);
+          }
+        }}
+      />
     </div>
   );
 };

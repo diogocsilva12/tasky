@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateProjectModal } from './CreateProjectModal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getCleanRepoDetails } from '@/lib/githubUrl';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 import {
@@ -23,6 +24,7 @@ import {
   CheckCircle2,
   Clock,
   Columns,
+  Ban,
 } from 'lucide-react';
 
 interface ProjectHeaderProps {
@@ -45,8 +47,9 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
   // Stats calculation
   const totalTasks = activeProjectTasks.length;
   const p0Count = activeProjectTasks.filter((t) => t.priority === 'P0').length;
+  const blockedCount = activeProjectTasks.filter((t) => t.isBlocked).length;
   const doneColumnIds = activeProject.columns
-    .filter((c) => c.title.toLowerCase().includes('done') || c.title.toLowerCase().includes('ship'))
+    .filter((c) => c.title.toLowerCase().includes('done') || c.title.toLowerCase().includes('ship') || c.id === 'done')
     .map((c) => c.id);
   const doneTasks = activeProjectTasks.filter((t) => doneColumnIds.includes(t.columnId)).length;
   const completionPercent = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
@@ -56,25 +59,17 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
       (c) =>
         c.title.toLowerCase().includes('progress') ||
         c.title.toLowerCase().includes('dev') ||
-        c.title.toLowerCase().includes('doing')
+        c.title.toLowerCase().includes('doing') ||
+        c.id === 'in-progress'
     )
     .map((c) => c.id);
   const inProgressTasks = activeProjectTasks.filter((t) =>
     inProgressColumnIds.includes(t.columnId)
   ).length;
 
-  const handleDeleteProject = () => {
-    if (confirmDeleteOpen) {
-      deleteProject(activeProject.id);
-      setConfirmDeleteOpen(false);
-    } else {
-      setConfirmDeleteOpen(true);
-    }
-  };
-
   return (
     <>
-      <div className="border-b border-border/70 bg-card/60 px-4 py-4 sm:px-6 backdrop-blur-sm">
+      <div className="border-b border-border/80 bg-card/75 px-4 py-4 sm:px-6 backdrop-blur-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Left Column: Project Name, Badges, and Description */}
           <div className="space-y-1.5 min-w-0">
@@ -122,6 +117,14 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                   {p0Count} Critical P0
                 </Badge>
               )}
+
+              {/* Blocked Badge if any exist */}
+              {blockedCount > 0 && (
+                <Badge variant="destructive" className="gap-1 bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30">
+                  <Ban className="h-3 w-3" />
+                  {blockedCount} Blocked
+                </Badge>
+              )}
             </div>
 
             {activeProject.description && (
@@ -135,6 +138,12 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
             {/* Quick Metrics */}
             <div className="hidden md:flex items-center gap-3 border-r border-border/60 pr-3 mr-1 text-xs text-muted-foreground">
+              {blockedCount > 0 && (
+                <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
+                  <Ban className="h-3.5 w-3.5" />
+                  <span className="font-semibold">{blockedCount}</span> blocked
+                </span>
+              )}
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5 text-amber-500" />
                 <span className="font-semibold text-foreground">{inProgressTasks}</span> in progress
@@ -187,11 +196,11 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={handleDeleteProject}
+                  onClick={() => setConfirmDeleteOpen(true)}
                   className="gap-2 text-xs text-destructive focus:text-destructive cursor-pointer"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span>{confirmDeleteOpen ? 'Confirm Delete?' : 'Delete Project'}</span>
+                  <span>Delete Project</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -203,6 +212,16 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         projectToEdit={activeProject}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete Project"
+        description={`Are you sure you want to delete "${activeProject.name}"? All tasks and columns associated with this project will be deleted.`}
+        confirmText="Delete Project"
+        destructive
+        onConfirm={() => deleteProject(activeProject.id)}
       />
     </>
   );

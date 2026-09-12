@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, X, User, RotateCcw } from 'lucide-react';
+import { Search, X, User, RotateCcw, Ban } from 'lucide-react';
 
 const PRIORITIES: { id: Priority | 'ALL'; label: string; dotColor: string }[] = [
   { id: 'ALL', label: 'All', dotColor: 'bg-muted-foreground' },
@@ -26,7 +26,8 @@ export function BoardFilters() {
   const hasActiveFilters =
     filter.searchQuery.trim() !== '' ||
     filter.priority !== 'ALL' ||
-    filter.assignee !== 'ALL';
+    filter.assignee !== 'ALL' ||
+    Boolean(filter.onlyBlocked);
 
   // Calculate count per priority for current project tasks
   const getPriorityCount = (p: Priority | 'ALL') => {
@@ -34,8 +35,10 @@ export function BoardFilters() {
     return activeProjectTasks.filter((t) => t.priority === p).length;
   };
 
+  const blockedCount = activeProjectTasks.filter((t) => t.isBlocked).length;
+
   return (
-    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-2.5 bg-background/50 border-b border-border/50">
+    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-2.5 bg-card/75 backdrop-blur-md border-b border-border/70 sticky top-14 z-20 shadow-xs">
       {/* Left: Search input */}
       <div className="relative flex-1 max-w-sm">
         <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -81,6 +84,22 @@ export function BoardFilters() {
             );
           })}
         </div>
+
+        {/* Blocker Filter Pill */}
+        <button
+          type="button"
+          onClick={() => setFilter({ onlyBlocked: !filter.onlyBlocked })}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer border ${
+            filter.onlyBlocked
+              ? 'bg-destructive text-destructive-foreground border-destructive shadow-xs font-semibold'
+              : 'border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/60'
+          }`}
+          title="Toggle only blocked tasks"
+        >
+          <Ban className="h-3 w-3" />
+          <span>Blocked</span>
+          <span className="text-[10px] opacity-80">({blockedCount})</span>
+        </button>
 
         {/* Assignee Filter Dropdown */}
         <DropdownMenu>

@@ -291,6 +291,7 @@ export const INITIAL_FILTER: BoardFilter = {
   searchQuery: '',
   priority: 'ALL',
   assignee: 'ALL',
+  onlyBlocked: false,
 };
 
 export interface BoardState {
@@ -751,6 +752,11 @@ export function getFilteredTasks(
         (a) => a.username.toLowerCase() === filter.assignee.toLowerCase()
       );
       if (!matchAssignee) return false;
+    }
+
+    // Blocker filter
+    if (filter.onlyBlocked && !task.isBlocked) {
+      return false;
     }
 
     return true;

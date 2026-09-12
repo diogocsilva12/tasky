@@ -24,6 +24,7 @@ import {
   Hash,
   User,
   Flame,
+  Ban,
 } from 'lucide-react';
 
 interface TaskModalProps {
@@ -96,6 +97,8 @@ export function TaskModal({
   const [assigneesInput, setAssigneesInput] = useState('');
   const [issueNumber, setIssueNumber] = useState('');
   const [branchName, setBranchName] = useState('');
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockerReason, setBlockerReason] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -104,6 +107,8 @@ export function TaskModal({
       setDescription(taskToEdit.description || '');
       setColumnId(taskToEdit.columnId);
       setPriority(taskToEdit.priority);
+      setIsBlocked(Boolean(taskToEdit.isBlocked));
+      setBlockerReason(taskToEdit.blockerReason || '');
       setAssigneesInput(
         taskToEdit.assignees.map((a) => a.username).join(', ')
       );
@@ -116,6 +121,8 @@ export function TaskModal({
       setDescription('');
       setColumnId(defaultColumnId || columns[0]?.id || '');
       setPriority('P2');
+      setIsBlocked(false);
+      setBlockerReason('');
       setAssigneesInput('');
       setIssueNumber('');
       setBranchName(defaultBranch || '');
@@ -150,26 +157,24 @@ export function TaskModal({
     const assignees = parseAssignees(assigneesInput);
     const parsedIssue = issueNumber.trim() ? parseInt(issueNumber.trim(), 10) : undefined;
 
+    const taskPayload = {
+      title: title.trim(),
+      description: description.trim() || undefined,
+      columnId: targetColId,
+      priority,
+      assignees,
+      githubIssueNumber: isNaN(parsedIssue as number) ? undefined : parsedIssue,
+      branchName: branchName.trim() || undefined,
+      isBlocked,
+      blockerReason: isBlocked ? (blockerReason.trim() || undefined) : undefined,
+    };
+
     if (taskToEdit) {
-      boardStore.updateTask(taskToEdit.id, {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        columnId: targetColId,
-        priority,
-        assignees,
-        githubIssueNumber: isNaN(parsedIssue as number) ? undefined : parsedIssue,
-        branchName: branchName.trim() || undefined,
-      });
+      boardStore.updateTask(taskToEdit.id, taskPayload);
     } else {
       boardStore.addTask({
         projectId,
-        columnId: targetColId,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        priority,
-        assignees,
-        githubIssueNumber: isNaN(parsedIssue as number) ? undefined : parsedIssue,
-        branchName: branchName.trim() || undefined,
+        ...taskPayload,
       });
     }
 
@@ -318,6 +323,45 @@ export function TaskModal({
                 className="text-xs"
               />
             </div>
+          </div>
+
+          {/* Blocker Settings */}
+          <div className={`rounded-xl border p-3 transition-colors ${
+            isBlocked
+              ? 'border-red-500/40 bg-red-500/10'
+              : 'border-border/70 bg-card/60'
+          } backdrop-blur-xs space-y-2`}>
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="modal-blocked-toggle" className="flex items-center gap-2 cursor-pointer select-none">
+                <Ban className={`h-4 w-4 shrink-0 ${isBlocked ? 'text-destructive' : 'text-muted-foreground'}`} />
+                <div>
+                  <span className="text-xs font-semibold text-foreground">Mark as Blocked</span>
+                  <p className="text-[11px] text-muted-foreground">
+                    Flag this task as blocked by an impediment, dependency, or pending review
+                  </p>
+                </div>
+              </label>
+              <input
+                id="modal-blocked-toggle"
+                type="checkbox"
+                checked={isBlocked}
+                onChange={(e) => setIsBlocked(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-destructive focus:ring-destructive accent-red-600 cursor-pointer shrink-0"
+              />
+            </div>
+
+            {isBlocked && (
+              <div className="pt-1.5 space-y-1">
+                <label className="text-xs font-medium text-foreground">Blocker Reason / Impediment Details</label>
+                <Input
+                  placeholder="e.g. Waiting on API response schema, blocked by PR #42, external dependency..."
+                  value={blockerReason}
+                  onChange={(e) => setBlockerReason(e.target.value)}
+                  className="text-xs"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter className="pt-3">
