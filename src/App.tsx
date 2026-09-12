@@ -13,7 +13,7 @@ import { SyncStatusButton } from './components/sync/SyncStatusButton';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
-import { boardStore, useBoardStore } from './store/boardStore';
+import { useBoardStore } from './store/boardStore';
 import { canUserAccessProject, getAccessibleProjects } from './lib/projectAccess';
 import { GithubIcon } from './components/icons/GithubIcon';
 import {
@@ -21,7 +21,6 @@ import {
   LayoutDashboard,
   BarChart3,
   ShieldCheck,
-  RotateCcw,
   LogOut,
   Lock,
 } from 'lucide-react';
@@ -113,18 +112,6 @@ function MainApp() {
           <div className="hidden sm:block">
             <SyncStatusButton />
           </div>
-
-          {/* Reset Demo Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => boardStore.resetToSampleData()}
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground hidden lg:flex items-center gap-1 cursor-pointer"
-            title="Reset board to sample seed data"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset Demo</span>
-          </Button>
 
           {/* GitHub Repo Direct Link */}
           <a
