@@ -22,6 +22,13 @@ export const AdminPage: React.FC = () => {
     revokeUserFromPassList 
   } = useAuth();
   
+  const [error, setError] = useState('');
+  const runAction = async (action: () => Promise<void>) => {
+    setError('');
+    try { await action(); }
+    catch (error) { setError(error instanceof Error ? error.message : 'Could not save access changes.'); }
+  };
+
   const [newUsername, setNewUsername] = useState('');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -30,7 +37,7 @@ export const AdminPage: React.FC = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refreshPassList();
+    await runAction(refreshPassList);
     setIsRefreshing(false);
   };
 
@@ -65,6 +72,7 @@ export const AdminPage: React.FC = () => {
         </div>
       </div>
 
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -121,7 +129,7 @@ export const AdminPage: React.FC = () => {
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancel</Button>
-                    <Button onClick={handleAddUser}>Add User</Button>
+                    <Button onClick={() => runAction(handleAddUser)}>Add User</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -193,7 +201,7 @@ export const AdminPage: React.FC = () => {
                           variant="outline"
                           size="icon"
                           className="text-green-600 hover:text-green-700"
-                          onClick={() => approveRequest(request.username)}
+                          onClick={() => runAction(() => approveRequest(request.username))}
                           title="Approve access"
                         >
                           <Check className="h-4 w-4" />
@@ -227,7 +235,7 @@ export const AdminPage: React.FC = () => {
         destructive
         onConfirm={() => {
           if (userToRevoke) {
-            revokeUserFromPassList(userToRevoke);
+            void runAction(() => revokeUserFromPassList(userToRevoke));
             setUserToRevoke(null);
           }
         }}
@@ -243,7 +251,7 @@ export const AdminPage: React.FC = () => {
         destructive
         onConfirm={() => {
           if (requestToReject) {
-            rejectRequest(requestToReject);
+            void runAction(() => rejectRequest(requestToReject));
             setRequestToReject(null);
           }
         }}

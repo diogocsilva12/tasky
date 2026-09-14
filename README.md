@@ -94,6 +94,9 @@ npm run build
 1. **Sign In**: Enter your GitHub Personal Access Token (PAT) with `repo`, `project`, and `gist` scopes.
 2. **Demo Mode**: Alternatively, click **"Explore Demo as Admin"** or **"Explore Demo as Member"** for zero-configuration exploration.
 3. **Admin Control**: When logged in as `@diogocsilva12`, access the **Admin Gate** in the top navigation to review pending access requests, approve users, or manually add GitHub handles to the Pass-List.
+4. **Shared access storage**: All accounts read the existing administrator-owned Gist identified by `PASSLIST_GIST_ID` in `src/services/gistPasslist.ts`. Forks must replace this ID with their own access Gist and update the owner in this service and `githubAuth.ts`. Keep `tasky-passlist.json` and `tasky-requests.json` as JSON arrays. A secret Gist is readable by anyone who knows its ID; do not store credentials or confidential notes there.
+5. **Requests and approvals**: Unapproved users click **Request Access**. Requests are stored as authenticated Gist comments; identity comes from GitHub's comment author. The Gist owner approves or rejects requests through Admin Gate. Only the Gist owner can save access decisions, even if another user has an app admin role. Requests and approvals refresh every minute and when the window regains focus; pending users can also click **Check approval status**. Failed writes display an error and do not count as successful requests or approvals.
+
 
 ---
 

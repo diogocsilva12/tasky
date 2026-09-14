@@ -6,14 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Lock, LogOut } from 'lucide-react';
 
 export const AccessPendingPage: React.FC = () => {
-  const { user, requestAccess, logout, authState } = useAuth();
+  const { user, requestAccess, logout, pendingRequests, refreshPassList } = useAuth();
   const [note, setNote] = useState('');
-  const [requested, setRequested] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
+  const [error, setError] = useState('');
+  const request = pendingRequests.find(r => r.username.toLowerCase() === user?.username.toLowerCase());
 
   const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    await requestAccess(note);
-    setRequested(true);
+    setIsBusy(true);
+    setError('');
+    try { await requestAccess(note); }
+    catch (error) { setError(error instanceof Error ? error.message : 'Could not submit request.'); }
+    finally { setIsBusy(false); }
   };
 
   return (
@@ -29,10 +34,10 @@ export const AccessPendingPage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {requested || authState === 'pending' ? (
+          {request ? (
             <div className="text-center text-sm space-y-4">
               <p className="bg-orange-100 text-orange-800 p-3 rounded-md">
-                Your request is pending admin approval.
+                {request.status === 'rejected' ? 'Your request was declined. Contact the admin to review your access.' : 'Your request is awaiting admin approval.'}
               </p>
               <p className="text-muted-foreground">
                 Please contact the admin (@diogocsilva12) if you need immediate access.
@@ -48,12 +53,20 @@ export const AccessPendingPage: React.FC = () => {
                   onChange={(e) => setNote(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isBusy}>
                 Request Access
               </Button>
             </form>
           )}
 
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          <Button variant="outline" className="w-full" disabled={isBusy} onClick={async () => {
+            setIsBusy(true);
+            setError('');
+            try { await refreshPassList(); }
+            catch (error) { setError(error instanceof Error ? error.message : 'Could not check access.'); }
+            finally { setIsBusy(false); }
+          }}>Check approval status</Button>
           <Button variant="ghost" onClick={logout} className="w-full text-muted-foreground mt-4">
             <LogOut className="h-4 w-4 mr-2" /> Sign out
           </Button>

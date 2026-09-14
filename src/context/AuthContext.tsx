@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { GitHubUser, getToken, setToken as setLocalToken, clearToken, validateToken } from '../services/githubAuth';
-import { PassListEntry, AccessRequest, fetchGistData, updateGistData } from '../services/gistPasslist';
+import { PassListEntry, AccessRequest, fetchGistData, updateGistData, submitAccessRequest, PASSLIST_GIST_ID } from '../services/gistPasslist';
 
 type AuthState = 'loading' | 'unauthenticated' | 'pending' | 'approved' | 'admin';
 
@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [passList, setPassList] = useState<PassListEntry[]>([]);
   const [pendingRequests, setPendingRequests] = useState<AccessRequest[]>([]);
-  const [gistId] = useState<string | null>(null);
+  const gistId = user && !user.isDemo ? PASSLIST_GIST_ID : null;
 
   useEffect(() => {
     const initAuth = async () => {
@@ -73,6 +73,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Pick up incoming requests and approvals while the signed-in session stays open.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    let refreshing = false;
+    const refresh = async () => {
+      const token = getToken();
+      if (!token || refreshing || document.visibilityState === 'hidden') return;
+      refreshing = true;
+      try {
+        const data = await fetchGistData(token);
+        if (cancelled || getToken() !== token) return;
+        setPassList(data.passList);
+        setPendingRequests(data.requests);
+        const entry = data.passList.find(entry => entry.username.toLowerCase() === user.username.toLowerCase());
+        setAuthState(user.role === 'super-admin' || entry?.role === 'admin' ? 'admin' : entry ? 'approved' : 'pending');
+      } catch {
+        // Keep the last confirmed state; explicit refresh surfaces errors to the user.
+      } finally {
+        refreshing = false;
+      }
+    };
+    const interval = window.setInterval(() => { void refresh(); }, 60_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [user]);
+
   const loginWithToken = async (token: string) => {
     setAuthState('loading');
     try {
@@ -81,6 +112,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(validUser);
       await loadGistData(token, validUser);
     } catch (e) {
+      clearToken();
+      setUser(null);
       setAuthState('unauthenticated');
       throw e;
     }
@@ -95,6 +128,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(validUser);
       await loadGistData(token, validUser);
     } catch (e) {
+      clearToken();
+      setUser(null);
       setAuthState('unauthenticated');
       throw e;
     }
@@ -119,12 +154,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       note,
     };
     const updatedRequests = [...pendingRequests.filter(r => r.username !== user.username), newRequest];
+    await submitAccessRequest(token, newRequest);
     setPendingRequests(updatedRequests);
-    await updateGistData(token, { passList, requests: updatedRequests });
   };
 
   const approveRequest = async (username: string) => {
+    if (authState !== 'admin') throw new Error('Administrator access is required.');
     const token = getToken() || '';
+    const { passList, requests: pendingRequests } = await fetchGistData(token);
     const request = pendingRequests.find(r => r.username === username);
     if (!request || !user) return;
 
@@ -137,40 +174,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       role: 'member',
     };
     
-    const updatedPassList = [...passList.filter(p => p.username !== username), newPassListEntry];
+    const updatedPassList = [...passList.filter(p => p.username.toLowerCase() !== username.trim().toLowerCase()), newPassListEntry];
     
+    await updateGistData(token, { passList: updatedPassList, requests: updatedRequests });
     setPendingRequests(updatedRequests);
     setPassList(updatedPassList);
-    await updateGistData(token, { passList: updatedPassList, requests: updatedRequests });
   };
 
   const rejectRequest = async (username: string) => {
+    if (authState !== 'admin') throw new Error('Administrator access is required.');
     const token = getToken() || '';
+    const { passList, requests: pendingRequests } = await fetchGistData(token);
     const updatedRequests = pendingRequests.map(r => r.username === username ? { ...r, status: 'rejected' as const } : r);
-    setPendingRequests(updatedRequests);
     await updateGistData(token, { passList, requests: updatedRequests });
+    setPendingRequests(updatedRequests);
   };
 
   const addUserToPassList = async (username: string, role: 'admin' | 'member', avatarUrl: string) => {
+    if (authState !== 'admin') throw new Error('Administrator access is required.');
     const token = getToken() || '';
+    const { passList, requests: pendingRequests } = await fetchGistData(token);
     if (!user) return;
     const newPassListEntry: PassListEntry = {
-      username,
+      username: username.trim(),
       approvedAt: new Date().toISOString(),
       approvedBy: user.username,
       avatarUrl,
       role,
     };
-    const updatedPassList = [...passList.filter(p => p.username !== username), newPassListEntry];
+    const updatedPassList = [...passList.filter(p => p.username.toLowerCase() !== username.trim().toLowerCase()), newPassListEntry];
+    const updatedRequests = pendingRequests.map(request => request.username.toLowerCase() === username.trim().toLowerCase()
+      ? { ...request, status: 'approved' as const }
+      : request);
+    await updateGistData(token, { passList: updatedPassList, requests: updatedRequests });
     setPassList(updatedPassList);
-    await updateGistData(token, { passList: updatedPassList, requests: pendingRequests });
+    setPendingRequests(updatedRequests);
   };
 
   const revokeUserFromPassList = async (username: string) => {
+    if (authState !== 'admin') throw new Error('Administrator access is required.');
     const token = getToken() || '';
-    const updatedPassList = passList.filter(p => p.username !== username);
-    setPassList(updatedPassList);
+    const { passList, requests: pendingRequests } = await fetchGistData(token);
+    const updatedPassList = passList.filter(p => p.username.toLowerCase() !== username.trim().toLowerCase());
     await updateGistData(token, { passList: updatedPassList, requests: pendingRequests });
+    setPassList(updatedPassList);
   };
 
   const refreshPassList = async () => {

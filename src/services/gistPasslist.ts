@@ -32,109 +32,99 @@ const DEFAULT_GIST_DATA: GistData = {
   requests: [],
 };
 
-let localMemoryGistData: GistData = { ...DEFAULT_GIST_DATA };
-let currentGistId: string | null = null;
+// All accounts must read the same owner-controlled Gist, including secret Gists.
+export const PASSLIST_GIST_ID = '1cf8b94ee4ce2b16db050183d7d093b6';
+const OWNER = 'diogocsilva12';
+const REQUEST_TYPE = 'tasky-access-request-v1';
+let localMemoryGistData: GistData = structuredClone(DEFAULT_GIST_DATA);
+const isDemo = (token: string) => token === 'demo-admin' || token === 'demo-member';
 
-export const setGistId = (gistId: string) => {
-  currentGistId = gistId;
-};
-
-export const fetchGistData = async (token: string, gistId?: string): Promise<GistData> => {
-  if (!token) return localMemoryGistData;
-  const idToFetch = gistId || currentGistId;
-  
-  if (!idToFetch) {
-    // Attempt to find the gist
-    const response = await fetch('https://api.github.com/gists', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
-    });
-    if (!response.ok) return localMemoryGistData;
-    const gists = await response.json();
-    const targetGist = gists.find((g: any) => g.files && g.files['tasky-passlist.json']);
-    
-    if (targetGist) {
-      currentGistId = targetGist.id;
-      return await getGistContent(token, targetGist.id);
-    } else {
-      // Create it
-      return await createGist(token);
-    }
-  }
-
-  return await getGistContent(token, idToFetch);
-};
-
-const getGistContent = async (token: string, gistId: string): Promise<GistData> => {
-  const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+async function github<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`https://api.github.com${path}`, {
+    ...init,
+    cache: 'no-store',
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
-  });
-  if (!response.ok) return localMemoryGistData;
-  const gist = await response.json();
-  try {
-    const passList = JSON.parse(gist.files['tasky-passlist.json'].content);
-    const requests = JSON.parse(gist.files['tasky-requests.json']?.content || '[]');
-    return { passList, requests };
-  } catch (e) {
-    return localMemoryGistData;
-  }
-};
-
-const createGist = async (token: string): Promise<GistData> => {
-  const response = await fetch('https://api.github.com/gists', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json',
+      Accept: 'application/vnd.github+json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      description: 'Tasky Auth & Admin Pass-List',
-      public: false,
-      files: {
-        'tasky-passlist.json': {
-          content: JSON.stringify(DEFAULT_GIST_DATA.passList, null, 2),
-        },
-        'tasky-requests.json': {
-          content: JSON.stringify(DEFAULT_GIST_DATA.requests, null, 2),
-        },
-      },
-    }),
   });
-  if (response.ok) {
-    const gist = await response.json();
-    currentGistId = gist.id;
+  if (!response.ok) {
+    throw new Error(`GitHub access storage failed (${response.status}). Check your connection and token's gist permission, then retry.`);
   }
-  return DEFAULT_GIST_DATA;
+  return response.json() as Promise<T>;
+}
+
+interface GistComment {
+  body: string;
+  created_at: string;
+  user: { login: string; avatar_url: string } | null;
+}
+
+export const fetchGistData = async (token: string): Promise<GistData> => {
+  if (isDemo(token)) return structuredClone(localMemoryGistData);
+  if (!token) throw new Error('Sign in to load access permissions.');
+  const gist = await github<{
+    owner: { login: string };
+    files: Record<string, { content: string; truncated?: boolean }>;
+  }>(token, `/gists/${PASSLIST_GIST_ID}`);
+  if (gist.owner.login.toLowerCase() !== OWNER) throw new Error('Invalid access storage owner.');
+  if (Object.values(gist.files).some(file => file.truncated)) throw new Error('Access storage is too large to read safely.');
+  const passList: PassListEntry[] = JSON.parse(gist.files['tasky-passlist.json'].content);
+  const requests: AccessRequest[] = JSON.parse(gist.files['tasky-requests.json']?.content || '[]');
+  if (!Array.isArray(passList) || !Array.isArray(requests)) throw new Error('Invalid access storage data.');
+
+  // Only the Gist owner can edit files. Other users submit authenticated comments.
+  // Never trust identity or approval fields supplied inside a comment body.
+  const merged = new Map(requests.map(request => [request.username.toLowerCase(), request]));
+  for (let page = 1; ; page++) {
+    const comments = await github<GistComment[]>(token, `/gists/${PASSLIST_GIST_ID}/comments?per_page=100&page=${page}`);
+    for (const comment of comments) {
+      if (!comment.user) continue;
+      let body;
+      try { body = JSON.parse(comment.body); } catch { continue; }
+      if (body?.type !== REQUEST_TYPE || typeof body.note !== 'string') continue;
+      const username = comment.user.login;
+      const key = username.toLowerCase();
+      // Persisted decisions win over comments, so old requests cannot reappear.
+      if (merged.has(key) || passList.some(entry => entry.username.toLowerCase() === key)) continue;
+      merged.set(key, {
+        username,
+        requestedAt: comment.created_at,
+        avatarUrl: comment.user.avatar_url,
+        status: 'pending',
+        note: body.note,
+      });
+    }
+    if (comments.length < 100) break;
+  }
+  return { passList, requests: [...merged.values()] };
+};
+
+export const submitAccessRequest = async (token: string, request: AccessRequest): Promise<void> => {
+  if (isDemo(token)) {
+    localMemoryGistData.requests = [...localMemoryGistData.requests.filter(r => r.username.toLowerCase() !== request.username.toLowerCase()), request];
+    return;
+  }
+  if (!token) throw new Error('Sign in to request access.');
+  await github(token, `/gists/${PASSLIST_GIST_ID}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body: JSON.stringify({ type: REQUEST_TYPE, note: request.note }) }),
+  });
 };
 
 export const updateGistData = async (token: string, data: GistData): Promise<void> => {
-  if (!token) {
-    localMemoryGistData = data;
+  if (isDemo(token)) {
+    localMemoryGistData = structuredClone(data);
     return;
   }
-  if (!currentGistId) return;
-
-  await fetch(`https://api.github.com/gists/${currentGistId}`, {
+  if (!token) throw new Error('Sign in to update access permissions.');
+  await github(token, `/gists/${PASSLIST_GIST_ID}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({
       files: {
-        'tasky-passlist.json': {
-          content: JSON.stringify(data.passList, null, 2),
-        },
-        'tasky-requests.json': {
-          content: JSON.stringify(data.requests, null, 2),
-        },
+        'tasky-passlist.json': { content: JSON.stringify(data.passList, null, 2) },
+        'tasky-requests.json': { content: JSON.stringify(data.requests, null, 2) },
       },
     }),
   });
