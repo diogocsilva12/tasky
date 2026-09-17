@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useFormSession } from '@/hooks/useFormSession';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +47,7 @@ export function ColumnModal({
   const [wipLimit, setWipLimit] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  useFormSession(open, JSON.stringify([projectId, columnToEdit?.id ?? null]), () => {
     if (columnToEdit) {
       setTitle(columnToEdit.title);
       setColor(columnToEdit.color || '#3b82f6');
@@ -57,7 +58,7 @@ export function ColumnModal({
       setWipLimit('');
     }
     setError('');
-  }, [columnToEdit, open]);
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

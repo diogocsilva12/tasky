@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useFormSession } from '@/hooks/useFormSession';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,7 @@ export function CreateProjectModal({
   const [activeBranch, setActiveBranch] = useState('main');
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  useFormSession(open, JSON.stringify(projectToEdit?.id ?? null), () => {
     if (projectToEdit) {
       setName(projectToEdit.name);
       setDescription(projectToEdit.description || '');
@@ -63,7 +64,7 @@ export function CreateProjectModal({
       setActiveBranch('main');
     }
     setError('');
-  }, [projectToEdit, open]);
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useFormSession } from '@/hooks/useFormSession';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -38,12 +39,12 @@ export const ProjectDeadlineModal: React.FC<ProjectDeadlineModalProps> = ({
   const [deadlineDate, setDeadlineDate] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  useFormSession(open, project.id, () => {
     if (open) {
       setDeadlineDate(project.deadline ? project.deadline.split('T')[0] : '');
       setError('');
     }
-  }, [open, project.deadline]);
+  });
 
   const previewStatus = getDeadlineStatus(deadlineDate);
 

@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useFormSession } from '@/hooks/useFormSession';
+import { AssigneePicker } from './AssigneePicker';
+import { projectMembers, parseAssigneeNames } from '@/lib/projectMembers';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -63,36 +66,36 @@ const PRIORITY_OPTIONS: {
     value: 'P0',
     label: 'P0 Critical',
     desc: 'Blocker / Urgent',
-    colorClass: 'text-red-500 border-red-500/40 bg-red-500/10',
-    bgSelected: 'bg-red-500 text-white font-bold border-red-600',
+    colorClass: 'text-red-700 dark:text-red-400 border-red-500/40 bg-red-500/10',
+    bgSelected: 'bg-red-600 text-white font-bold border-red-600',
   },
   {
     value: 'P1',
     label: 'P1 High',
     desc: 'High priority',
-    colorClass: 'text-orange-500 border-orange-500/40 bg-orange-500/10',
-    bgSelected: 'bg-orange-500 text-white font-semibold border-orange-600',
+    colorClass: 'text-orange-700 dark:text-orange-400 border-orange-500/40 bg-orange-500/10',
+    bgSelected: 'bg-orange-700 text-white font-semibold border-orange-600',
   },
   {
     value: 'P2',
     label: 'P2 Medium',
     desc: 'Normal priority task',
-    colorClass: 'text-amber-500 border-amber-500/40 bg-amber-500/10',
-    bgSelected: 'bg-amber-500 text-white font-medium border-amber-600',
+    colorClass: 'text-amber-800 dark:text-amber-300 border-amber-500/40 bg-amber-500/10',
+    bgSelected: 'bg-amber-400 text-amber-950 font-medium border-amber-600',
   },
   {
     value: 'P3',
     label: 'P3 Low',
     desc: 'Minor feature / chore',
-    colorClass: 'text-blue-500 border-blue-500/40 bg-blue-500/10',
+    colorClass: 'text-blue-700 dark:text-blue-400 border-blue-500/40 bg-blue-500/10',
     bgSelected: 'bg-blue-500 text-white font-medium border-blue-600',
   },
   {
     value: 'P4',
     label: 'P4 Trivial',
     desc: 'Nice-to-have / polish',
-    colorClass: 'text-emerald-500 border-emerald-500/40 bg-emerald-500/10',
-    bgSelected: 'bg-emerald-500 text-white font-normal border-emerald-600',
+    colorClass: 'text-emerald-700 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
+    bgSelected: 'bg-emerald-700 text-white font-normal border-emerald-600',
   },
 ];
 
@@ -105,12 +108,14 @@ export function TaskModal({
   defaultColumnId,
   defaultBranch,
 }: TaskModalProps) {
-  const { user } = useAuth();
+  const { user, passList } = useAuth();
+  const members = projectMembers(boardStore.getState().projects.find(p => p.id === projectId), [...passList, ...(user ? [{ ...user, name: user.name || undefined }] : [])]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [columnId, setColumnId] = useState('');
   const [priority, setPriority] = useState<Priority>('P2');
   const [assigneesInput, setAssigneesInput] = useState('');
+  const [reviewersInput, setReviewersInput] = useState('');
   const [issueNumber, setIssueNumber] = useState('');
   const [prNumber, setPrNumber] = useState('');
   const [prStatus, setPrStatus] = useState<PrStatus | 'none'>('none');
@@ -128,9 +133,10 @@ export function TaskModal({
   const [descTab, setDescTab] = useState<'write' | 'preview'>('write');
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  useFormSession(open, JSON.stringify([projectId, taskToEdit?.id ?? null]), () => {
     if (taskToEdit) {
       setTitle(taskToEdit.title);
+      setReviewersInput((taskToEdit.reviewers || []).map(a => a.username).join(', '));
       setDescription(taskToEdit.description || '');
       setColumnId(taskToEdit.columnId);
       setPriority(taskToEdit.priority);
@@ -161,6 +167,7 @@ export function TaskModal({
       setIsBlocked(false);
       setBlockerReason('');
       setAssigneesInput('');
+      setReviewersInput('');
       setIssueNumber('');
       setPrNumber('');
       setPrStatus('none');
@@ -176,13 +183,10 @@ export function TaskModal({
     setNewCommentText('');
     setDescTab('write');
     setError('');
-  }, [taskToEdit, defaultColumnId, defaultBranch, columns, open]);
+  });
 
   const parseAssignees = (raw: string): Assignee[] => {
-    return raw
-      .split(',')
-      .map((s) => s.trim().replace(/^@/, ''))
-      .filter(Boolean)
+    return parseAssigneeNames(raw)
       .map((username) => ({
         username,
         avatarUrl: `https://github.com/${username}.png`,
@@ -271,6 +275,7 @@ export function TaskModal({
       columnId: targetColId,
       priority,
       assignees,
+      reviewers: parseAssignees(reviewersInput),
       githubIssueNumber: isNaN(parsedIssue as number) ? undefined : parsedIssue,
       githubPrNumber: isNaN(parsedPr as number) ? undefined : parsedPr,
       prStatus: cleanPrStatus,
@@ -441,17 +446,14 @@ export function TaskModal({
               <User className="h-3.5 w-3.5 text-muted-foreground" />
               Assignees (GitHub Usernames)
             </label>
-            <Input
-              placeholder="e.g. diogocsilva12, sarah-chen"
-              value={assigneesInput}
-              onChange={(e) => setAssigneesInput(e.target.value)}
-              className="text-xs"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Comma-separated list of GitHub usernames.
-            </p>
+            <AssigneePicker value={assigneesInput} onChange={setAssigneesInput} members={members} />
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold">Reviewers</label>
+            <AssigneePicker label="Reviewers" value={reviewersInput} onChange={setReviewersInput} members={members} />
+            <p className="text-xs text-muted-foreground">Appears in their inbox when this task enters a Review, QA or Approval column.</p>
+          </div>
           {/* GitHub Metadata Row */}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div className="space-y-1.5">

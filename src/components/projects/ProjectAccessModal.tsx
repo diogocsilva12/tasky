@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useFormSession } from '@/hooks/useFormSession';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -41,14 +42,14 @@ export const ProjectAccessModal: React.FC<ProjectAccessModalProps> = ({
   const [newUsername, setNewUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  useFormSession(open, project.id, () => {
     if (project && open) {
       setVisibility(project.visibility || 'public');
       setAllowedUsers(project.allowedUsers || []);
       setNewUsername('');
       setError(null);
     }
-  }, [project, open]);
+  });
 
   const handleAddUser = (usernameToAdd: string) => {
     const clean = usernameToAdd.trim().replace(/^@/, '');
