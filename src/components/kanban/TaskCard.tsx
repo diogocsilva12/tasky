@@ -365,7 +365,34 @@ export function TaskCard({
                 style={{
                   width: `${Math.round((completedSubtasks / totalSubtasks) * 100)}%`,
                 }}
-              />
+                />
+            </div>
+            <div className="space-y-0.5 pt-0.5">
+              {subtasks.slice(0, 3).map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className="flex min-w-0 items-center gap-1.5 text-[10px] leading-tight text-muted-foreground"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-3 w-3 shrink-0 items-center justify-center rounded border text-[8px] font-bold ${
+                      subtask.completed
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border/70 bg-background/50'
+                    }`}
+                  >
+                    {subtask.completed ? '✓' : ''}
+                  </span>
+                  <span className={`truncate ${subtask.completed ? 'text-muted-foreground/70 line-through' : 'text-foreground/80'}`}>
+                    {subtask.title}
+                  </span>
+                </div>
+              ))}
+              {totalSubtasks > 3 && (
+                <span className="block pl-[18px] text-[9px] text-muted-foreground/70">
+                  +{totalSubtasks - 3} more
+                </span>
+              )}
             </div>
           </div>
         )}
