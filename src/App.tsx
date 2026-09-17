@@ -1,4 +1,8 @@
+import { InboxPage } from './pages/InboxPage';
+import { usePersonalInbox } from './hooks/usePersonalInbox';
+import { Inbox } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { BoardSyncProvider } from './context/BoardSyncContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { AccessPendingPage } from './components/auth/AccessPendingPage';
@@ -32,14 +36,14 @@ import {
   Lock,
   Command,
   Share2,
-  Undo2,
 } from 'lucide-react';
 
-type ActiveView = 'public-board' | 'board' | 'timeline' | 'resume' | 'admin';
+type ActiveView = 'inbox' | 'public-board' | 'board' | 'timeline' | 'resume' | 'admin';
 
 function MainApp() {
+  const inbox = usePersonalInbox();
   const { user, authState, logout } = useAuth();
-  const { projects, activeProject, setActiveProject, resetFilter, undo, undoLabel } = useBoardStore();
+  const { projects, activeProject, setActiveProject, resetFilter } = useBoardStore();
   const [activeView, setActiveView] = useState<ActiveView>('board');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
@@ -67,10 +71,10 @@ function MainApp() {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Main Navigation Bar */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border/80 bg-background/95 px-3 sm:px-6 backdrop-blur-md">
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           {/* Logo */}
           <div
-            className="flex items-center gap-2 cursor-pointer select-none"
+            className="flex shrink-0 items-center gap-2 cursor-pointer select-none"
             onClick={() => setActiveView('board')}
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
@@ -84,7 +88,7 @@ function MainApp() {
           <div className="h-4 w-px bg-border/80 hidden sm:block" />
 
           {/* View Switcher Tabs */}
-          <nav className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border/40">
+          <nav className="flex min-w-0 overflow-x-auto items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border/40">
             <Button
               variant={activeView === 'board' ? 'default' : 'ghost'}
               size="sm"
@@ -136,7 +140,7 @@ function MainApp() {
 
           {/* Project Switcher (When on Board or Timeline View) */}
           {(activeView === 'board' || activeView === 'timeline') && (
-            <div className="hidden md:flex items-center">
+            <div className="hidden xl:flex items-center">
               <div className="h-4 w-px bg-border/80 mx-2" />
               <ProjectSwitcher />
             </div>
@@ -144,9 +148,9 @@ function MainApp() {
         </div>
 
         {/* Right Nav Utilities */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" disabled={!undoLabel} onClick={undo} title={undoLabel ? `Undo: ${undoLabel}` : 'No task actions to undo'} aria-label={undoLabel ? `Undo: ${undoLabel}` : 'Undo'} className="gap-1">
-            <Undo2 className="h-4 w-4" /><span className="hidden sm:inline">Undo</span>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <Button variant={activeView === 'inbox' ? 'default' : 'ghost'} size="sm" onClick={() => setActiveView('inbox')} aria-label={`Inbox (${inbox.unreadCount} unread)`} className="gap-1">
+            <Inbox className="h-4 w-4" /><span className="hidden sm:inline">Inbox</span>{inbox.unreadCount > 0 && <span className="text-xs">{inbox.unreadCount}</span>}
           </Button>
           {/* Spotlight / Command Palette trigger */}
           <Button
@@ -235,7 +239,13 @@ function MainApp() {
       {/* Main Content Area based on Active View */}
       {activeView === 'board' && (
         <>
-          {canAccessCurrent ? (
+          {projects.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+              <h2 className="text-xl font-bold">No shared projects yet</h2>
+              <p className="text-sm text-muted-foreground max-w-md">Create a project, or import your JSON backup from the old Tasky site. Approved teammates will see shared projects here.</p>
+              <div className="flex gap-2"><Button onClick={() => setCreateProjectModalOpen(true)}>Create project</Button><Button variant="outline" onClick={() => setExportModalOpen(true)}>Import backup</Button></div>
+            </div>
+          ) : canAccessCurrent ? (
             <>
               <ProjectHeader
                 onOpenNewTask={() => setTaskModalOpen(true)}
@@ -328,6 +338,7 @@ function MainApp() {
         </>
       )}
 
+      {activeView === 'inbox' && <InboxPage inbox={inbox} onOpenTask={task => { setActiveProject(task.projectId); resetFilter(); setSelectedTaskForBoard(task); setActiveView('board'); }} />}
       {activeView === 'resume' && (
         <main className="flex-1 overflow-y-auto">
           <LandingPage onNavigateToBoard={() => setActiveView('board')} />
@@ -394,7 +405,7 @@ function AppContent() {
     return <AccessPendingPage />;
   }
 
-  return <MainApp />;
+  return <BoardSyncProvider><MainApp /></BoardSyncProvider>;
 }
 
 export default function App() {
