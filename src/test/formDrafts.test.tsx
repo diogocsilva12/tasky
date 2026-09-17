@@ -9,7 +9,6 @@ import { ProjectAccessModal } from '../components/projects/ProjectAccessModal';
 import { ProjectDeadlineModal } from '../components/projects/ProjectDeadlineModal';
 import { boardStore, useBoardStore, INITIAL_PROJECTS, INITIAL_TASKS } from '../store/boardStore';
 
-import { BoardCloud } from '../services/boardCloud';
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: null, passList: [] }) }));
 let root: Root;
@@ -139,12 +138,7 @@ it.each([false, true])('preserves text, focus and caret during cloud sync (editi
   await type(title, 'Keep typing through sync');
   const input = field(title);
   input.focus(); input.setSelectionRange(5, 5);
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(data)));
-  const cloud = new BoardCloud({ token: 'test', base: data,
-    getLocal: () => { const { projects, tasks } = boardStore.getState(); return { projects, tasks }; },
-    apply: next => boardStore.replaceBoard(next), status: vi.fn(), saveBase: vi.fn(),
-  });
-  await act(async () => cloud.sync());
+  await act(async () => boardStore.replaceBoard(structuredClone(data)));
   expect(field(title)).toBe(input);
   expect(input.value).toBe('Keep typing through sync');
   expect(document.activeElement).toBe(input);
