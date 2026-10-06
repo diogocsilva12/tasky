@@ -120,7 +120,7 @@ GitHub Device Flow uses `/api/device-auth`, with fixed GitHub endpoints and no e
 - Task assignees can be selected from a searchable list of approved users with project access. Names are inserted with commas and deduplicated.
 - **Executive Dashboard & Resume → Learn from our organization** lets project owners and administrators record a success rating, notes and a snapshot of organization/completion metrics. A small statistical model compares practices across reviewed projects, with smoothing and minimum sample counts. It learns from explicit outcomes; it does not claim causality or invent successful project histories.
 
-Deployment uses `npx vercel --prod`. The Vercel project is currently deployed through the CLI; automatic Git deployment is not connected. Run `npm test` and `npm run build` before deployment. The build includes a separate NodeNext TypeScript check for API functions.
+Deployment uses `npx vercel --prod`. Vercel also builds GitHub pull request previews. Run `npm test` and `npm run build` before deployment. The build includes a separate NodeNext TypeScript check for API functions.
 
 ### Organization history and personal inbox
 
