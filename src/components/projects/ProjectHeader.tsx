@@ -1,3 +1,5 @@
+import { OrganizationHistory } from './OrganizationHistory';
+import { History } from 'lucide-react';
 import { useState } from 'react';
 import { useBoardStore } from '@/store/boardStore';
 import { Button } from '@/components/ui/button';
@@ -44,6 +46,7 @@ interface ProjectHeaderProps {
 export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderProps) {
   const { activeProject, activeProjectTasks, deleteProject } = useBoardStore();
   const { user } = useAuth();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
@@ -85,6 +88,7 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
 
   return (
     <>
+      <OrganizationHistory project={activeProject} tasks={activeProjectTasks} open={historyOpen} onOpenChange={setHistoryOpen} />
       <div className="border-b border-border/80 bg-card/75 px-4 py-4 sm:px-6 backdrop-blur-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Left Column: Project Name, Badges, and Description */}
@@ -229,6 +233,7 @@ export function ProjectHeader({ onOpenNewTask, onOpenAddColumn }: ProjectHeaderP
               </span>
             </div>
 
+            <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)} className="h-8 gap-1.5 text-xs"><History className="h-3.5 w-3.5" />History</Button>
             {/* Add Column Button */}
             <Button
               variant="outline"

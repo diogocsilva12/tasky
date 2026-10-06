@@ -1,6 +1,8 @@
 # Tasky 📋
 
-Tasky is a minimalist, high-velocity GitHub-integrated Task & Kanban Board application designed for deployment on GitHub Pages. It features client-side authentication, an admin-governed GitHub Gist Pass-List, bi-directional sync with GitHub Projects V2 and Issues, customizable columns with `@dnd-kit`, P0–P4 priority grading, multi-project switching, branch/repo direct navigation, multi-theme customization, and an executive landing resume dashboard.
+Tasky is a GitHub-integrated Task & Kanban Board application deployed on Vercel. It provides shared projects and tasks, server-enforced project permissions, GitHub authentication, an administrator-approved pass-list, customizable workflows, multiple light and dark themes, and project retrospectives.
+
+Live app: https://tasky-silk-two.vercel.app
 
 ---
 
@@ -102,3 +104,26 @@ npm run build
 
 ## 📄 License
 MIT © Diogo Silva
+
+## Shared workspace on Vercel
+
+`/api/board` authenticates each GitHub token and checks the shared pass-list before reading or changing projects. Storage is the private `diogocsilva12/tasky-data` repository; `TASKY_STORAGE_TOKEN` is a server-only Vercel secret. `TASKY_STORAGE_REPO` can override the repository. Public projects are visible to approved users, and private projects are filtered on the server. Edits autosave after two seconds; other sessions refresh every minute or through Sync. Concurrent edits to the same item produce a conflict instead of silent overwrites.
+
+The GitHub Pages version stores projects in the original browser. To migrate existing work, export its JSON Full Backup and import it using the Vercel app's Import backup action. Fresh real accounts do not receive demo projects. Local backups and demo sessions are isolated by account.
+
+GitHub Device Flow uses `/api/device-auth`, with fixed GitHub endpoints and no external CORS proxy. The native verification link opens GitHub independently of clipboard access.
+
+## Appearance, remembered sessions and project learning
+
+- The palette menu offers four light themes and six dark themes. Form surfaces, inputs and date controls follow the selected theme.
+- Check **Remember me on this device** when signing in to keep a 30-day session. `TASKY_SESSION_SECRET` must be a random 32-byte base64url server secret. The token is encrypted in a Secure, HttpOnly, SameSite=Strict cookie, restored into the current session when needed and removed from the remembered session on sign-out. Demo tokens cannot be remembered.
+- Task assignees can be selected from a searchable list of approved users with project access. Names are inserted with commas and deduplicated.
+- **Executive Dashboard & Resume → Learn from our organization** lets project owners and administrators record a success rating, notes and a snapshot of organization/completion metrics. A small statistical model compares practices across reviewed projects, with smoothing and minimum sample counts. It learns from explicit outcomes; it does not claim causality or invent successful project histories.
+
+Deployment uses `npx vercel --prod`. The Vercel project is currently deployed through the CLI; automatic Git deployment is not connected. Run `npm test` and `npm run build` before deployment. The build includes a separate NodeNext TypeScript check for API functions.
+
+### Organization history and personal inbox
+
+- **Project → History** records workflow column additions/removals/reordering/renaming, WIP limits, project ownership, access and dates with before/after values and the acting user. It also displays existing task assignment, reviewer and deadline activity. New project history starts when changes are recorded; historical gaps are not backfilled. History travels with the shared project and JSON backups. Deleting a project/task removes its in-app history along with it.
+- **Inbox** shows your assignments, exact `@username` mentions in descriptions/comments, overdue work and deadlines within seven calendar days, and tasks awaiting your review across accessible projects. Explicit **Reviewers** can be selected in the task editor. Review requests appear in Review, QA, Approval or Revisão columns; without explicit reviewers, the assignee receives the review item.
+- Opening an inbox item opens its task and marks that item read. Read status persists per account on this device; assignments, comments, reviewers and history use the shared board sync. Read status does not sync across devices. The retrospective learning model still uses the recorded final review snapshots; the timeline supplies project context without claiming causal learning from changes.

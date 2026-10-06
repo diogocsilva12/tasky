@@ -8,7 +8,7 @@ export function makeTaskActivity(action: string, actor: Assignee | undefined, be
     const raw = task[key as keyof Task];
     if (raw === undefined) return '—';
     if (key === 'columnId') return projects.find((p) => p.id === task.projectId)?.columns.find((c) => c.id === raw)?.title || String(raw);
-    if (key === 'assignees') return task.assignees.map((person) => `@${person.username}`).join(', ') || 'Unassigned';
+    if (key === 'assignees' || key === 'reviewers') return (task[key] || []).map((person) => `@${person.username}`).join(', ') || 'Unassigned';
     return typeof raw === 'string' ? raw : JSON.stringify(raw);
   };
   return {

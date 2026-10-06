@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { THEMES, resolveTheme, themeClasses } from '@/lib/themes';
 import type { Theme } from '@/types';
 
 interface ThemeProviderProps {
@@ -26,38 +27,22 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(() => {
-    return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+    try { return resolveTheme(localStorage.getItem(storageKey), defaultTheme); }
+    catch { return defaultTheme; }
   });
 
   React.useEffect(() => {
     const root = window.document.documentElement;
 
-    // Remove all previous theme classes
-    root.classList.remove(
-      'light',
-      'dark',
-      'theme-slate',
-      'theme-midnight',
-      'theme-zinc',
-      'theme-cyberpunk',
-      'theme-monokai'
-    );
-
-    if (theme === 'light') {
-      root.classList.add('light');
-    } else if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      // Custom themes inherit dark base styles with custom accent/surface overrides
-      root.classList.add('dark', `theme-${theme}`);
-    }
+    root.classList.remove('light', 'dark', ...THEMES.map(t => `theme-${t.id}`));
+    root.classList.add(...themeClasses(theme));
   }, [theme]);
 
   const value = React.useMemo(
     () => ({
       theme,
       setTheme: (newTheme: Theme) => {
-        localStorage.setItem(storageKey, newTheme);
+        try { localStorage.setItem(storageKey, newTheme); } catch { /* Apply even when storage is unavailable. */ }
         setTheme(newTheme);
       },
     }),

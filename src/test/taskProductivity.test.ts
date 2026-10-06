@@ -6,6 +6,7 @@ import { defaultView, loadSavedViews, saveViews, shortcutView } from '@/lib/save
 beforeEach(() => {
   const data = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => data.set(key, value), removeItem: (key: string) => data.delete(key) });
+  boardStore.openSession('alice', true);
   boardStore.resetToSampleData();
   boardStore.setActor({ username: 'alice', avatarUrl: 'https://github.com/alice.png' });
 });
@@ -25,7 +26,7 @@ describe('Task creators and activity', () => {
     expect(activity.actor?.username).toBe('bob');
     expect(activity.changes).toContainEqual({ field: 'title', before: 'New task', after: 'Changed' });
     expect(activity.at).toMatch(/^\d{4}-/);
-    expect(JSON.parse(localStorage.getItem('tasky_tasks_v1')!).find((item: { id: string }) => item.id === task.id).activity).toHaveLength(2);
+    expect(JSON.parse(localStorage.getItem('tasky_board_v2:demo:alice')!).tasks.find((item: { id: string }) => item.id === task.id).activity).toHaveLength(2);
   });
 
   it('records source column titles for moves and never attributes legacy tasks to their assignees', () => {

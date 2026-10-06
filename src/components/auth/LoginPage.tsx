@@ -10,6 +10,7 @@ import { AlertCircle, ExternalLink, ShieldCheck, Sparkles } from 'lucide-react';
 export const LoginPage: React.FC = () => {
   const { loginWithToken, loginDemo } = useAuth();
   const [token, setToken] = useState('');
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deviceModalOpen, setDeviceModalOpen] = useState(false);
@@ -19,7 +20,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
     setLoading(true);
     try {
-      await loginWithToken(token);
+      await loginWithToken(token, remember);
     } catch (err: any) {
       setError(err.message || 'Failed to login with provided token.');
     } finally {
@@ -41,6 +42,10 @@ export const LoginPage: React.FC = () => {
         </CardHeader>
 
         <CardContent className="space-y-5">
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm cursor-pointer">
+            <input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)} className="mt-1 accent-primary" />
+            <span><span className="block font-medium">Remember me on this device</span><span className="block text-xs text-muted-foreground mt-1">Stay signed in for 30 days. Signing out removes the remembered session.</span></span>
+          </label>
           {/* Solution 1: Direct GitHub Device Login */}
           <div className="space-y-2">
             <Button
@@ -151,7 +156,7 @@ export const LoginPage: React.FC = () => {
         open={deviceModalOpen}
         onOpenChange={setDeviceModalOpen}
         onSuccess={async (tok) => {
-          await loginWithToken(tok);
+          await loginWithToken(tok, remember);
         }}
       />
     </div>

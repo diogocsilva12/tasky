@@ -11,6 +11,7 @@ const TOKEN_KEY = 'tasky_github_pat';
 let memoryToken: string | null = null;
 
 export const setToken = (token: string) => {
+  memoryToken = token;
   try {
     sessionStorage.setItem(TOKEN_KEY, token);
   } catch (e) {

@@ -1,4 +1,4 @@
-import type { Project } from '@/types';
+import type { Project } from '../types/index.js';
 
 export interface UserAccessInfo {
   username?: string;

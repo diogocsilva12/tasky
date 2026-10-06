@@ -1,4 +1,6 @@
+import { recordOrganizationChange } from '../lib/organizationHistory';
 import { useSyncExternalStore } from 'react';
+import { emptyBoard, parseBoard, sameData, type BoardData } from '../lib/boardSync';
 import type { Project, Column, Task, BoardFilter, Assignee } from '@/types';
 import { makeTaskActivity } from '@/lib/taskActivity';
 import { getCleanRepoDetails } from '@/lib/githubUrl';
@@ -359,52 +361,14 @@ export interface BoardState {
   filter: BoardFilter;
 }
 
+let sessionKey: string | null = null;
 function loadInitialState(): BoardState {
-  try {
-    const savedProjects = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-    const savedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
-    const savedActiveId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PROJECT_ID);
-
-    const rawProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : INITIAL_PROJECTS;
-    const projects: Project[] = rawProjects.map((p) => {
-      const details = getCleanRepoDetails(p);
-      return {
-        ...p,
-        repoOwner: details.owner || p.repoOwner,
-        repoName: details.name || p.repoName,
-        githubUrl: details.repoUrl || p.githubUrl,
-      };
-    });
-    const tasks: Task[] = savedTasks ? JSON.parse(savedTasks) : INITIAL_TASKS;
-    const activeProjectId: string =
-      savedActiveId && projects.some((p) => p.id === savedActiveId)
-        ? savedActiveId
-        : projects[0]?.id || INITIAL_PROJECTS[0].id;
-
-    return {
-      projects,
-      activeProjectId,
-      tasks,
-      filter: { ...INITIAL_FILTER },
-    };
-  } catch {
-    return {
-      projects: INITIAL_PROJECTS,
-      activeProjectId: INITIAL_PROJECTS[0].id,
-      tasks: INITIAL_TASKS,
-      filter: { ...INITIAL_FILTER },
-    };
-  }
+  return { ...emptyBoard(), activeProjectId: '', filter: { ...INITIAL_FILTER } };
 }
-
 function saveState(state: BoardState): void {
-  try {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(state.projects));
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(state.tasks));
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_PROJECT_ID, state.activeProjectId);
-  } catch (error) {
-    console.error('Failed to save board state to localStorage:', error);
-  }
+  if (!sessionKey) return;
+  try { localStorage.setItem(sessionKey, JSON.stringify(state)); }
+  catch (error) { console.error('Could not save local board backup:', error); }
 }
 
 let currentState: BoardState = loadInitialState();
@@ -413,10 +377,13 @@ const listeners = new Set<() => void>();
 let actor: Assignee | undefined;
 let previousTasks = structuredClone(currentState.tasks);
 let previousProjects = JSON.stringify(currentState.projects);
+let previousProjectData = structuredClone(currentState.projects);
 const taskContent = (task: Task) => JSON.stringify({ ...task, activity: undefined, updatedAt: undefined });
 const undoStack: { label: string; tasks: Task[] }[] = [];
 
-function emitChange(action?: string): void {
+function emitChange(action?: string, trackOrganization = false): void {
+  if (trackOrganization) currentState = { ...currentState, projects: currentState.projects.map(project => recordOrganizationChange(previousProjectData.find(p => p.id === project.id), project, actor)) };
+  previousProjectData = structuredClone(currentState.projects);
   if (previousProjects !== JSON.stringify(currentState.projects)) undoStack.length = 0;
   previousProjects = JSON.stringify(currentState.projects);
   const tasksChanged = JSON.stringify(previousTasks) !== JSON.stringify(currentState.tasks);
@@ -439,6 +406,44 @@ function emitChange(action?: string): void {
 }
 
 export const boardStore = {
+  openSession(username: string, demo: boolean): void {
+    sessionKey = `tasky_board_v2:${demo ? 'demo' : 'github'}:${username.toLowerCase()}`;
+    currentState = loadInitialState();
+    try {
+      const saved = localStorage.getItem(sessionKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        currentState = { ...currentState, ...parseBoard(parsed), activeProjectId: parsed.activeProjectId || '' };
+      } else if (demo) {
+        currentState = { ...currentState, projects: structuredClone(INITIAL_PROJECTS), tasks: structuredClone(INITIAL_TASKS) };
+      } else if (username.toLowerCase() === 'diogocsilva12') {
+        // Preserve the old owner browser's real data; never seed a fresh session with samples.
+        const projects: Project[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROJECTS) || '[]');
+        const tasks: Task[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+        const realProjects = projects.filter(project => {
+          const sample = INITIAL_PROJECTS.find(p => p.id === project.id);
+          return !sample || !sameData(sample, project) || !sameData(tasks.filter(t => t.projectId === project.id), INITIAL_TASKS.filter(t => t.projectId === project.id));
+        });
+        currentState = { ...currentState, ...parseBoard({ projects: realProjects, tasks: tasks.filter(t => realProjects.some(p => p.id === t.projectId)) }) };
+      }
+    } catch { /* The old keys are retained for manual recovery if a backup is malformed. */ }
+    currentState.activeProjectId = currentState.projects.some(p => p.id === currentState.activeProjectId) ? currentState.activeProjectId : currentState.projects[0]?.id || '';
+    undoStack.length = 0;
+    emitChange();
+  },
+  closeSession(): void {
+    sessionKey = null;
+    currentState = loadInitialState();
+    actor = undefined;
+    undoStack.length = 0;
+    emitChange();
+  },
+  replaceBoard(data: BoardData): void {
+    const activeProjectId = data.projects.some(p => p.id === currentState.activeProjectId) ? currentState.activeProjectId : data.projects[0]?.id || '';
+    currentState = { ...currentState, ...structuredClone(data), activeProjectId };
+    emitChange();
+  },
+
   setActor(person?: Assignee): void {
     const changedUser = actor?.username !== person?.username;
     if (changedUser) undoStack.length = 0;
@@ -507,8 +512,8 @@ export const boardStore = {
       projects: [...currentState.projects, newProject],
       activeProjectId: id,
     };
-    emitChange();
-    return newProject;
+    emitChange(undefined, true);
+    return currentState.projects.find(p => p.id === id)!;
   },
 
   updateProject(id: string, updates: Partial<Project>): void {
@@ -526,6 +531,7 @@ export const boardStore = {
         return {
           ...p,
           ...updates,
+          organizationHistory: p.organizationHistory,
           repoOwner,
           repoName,
           githubUrl,
@@ -533,7 +539,7 @@ export const boardStore = {
         };
       }),
     };
-    emitChange();
+    emitChange(undefined, true);
   },
 
   deleteProject(id: string): void {
@@ -549,7 +555,7 @@ export const boardStore = {
       activeProjectId: newActiveId,
       tasks: currentState.tasks.filter((t) => t.projectId !== id),
     };
-    emitChange();
+    emitChange(undefined, true);
   },
 
   setActiveProject(id: string): void {
@@ -559,7 +565,7 @@ export const boardStore = {
         ...currentState,
         activeProjectId: id,
       };
-      emitChange();
+      emitChange(undefined, true);
     }
   },
 
@@ -590,7 +596,7 @@ export const boardStore = {
           : p
       ),
     };
-    emitChange();
+    emitChange(undefined, true);
     return newColumn;
   },
 
@@ -609,7 +615,7 @@ export const boardStore = {
         };
       }),
     };
-    emitChange();
+    emitChange(undefined, true);
   },
 
   deleteColumn(projectId: string, columnId: string, targetColumnId?: string): void {
@@ -648,7 +654,7 @@ export const boardStore = {
       ),
       tasks: updatedTasks,
     };
-    emitChange();
+    emitChange(undefined, true);
   },
 
   reorderColumns(projectId: string, columnIds: string[]): void {
@@ -679,7 +685,7 @@ export const boardStore = {
         };
       }),
     };
-    emitChange();
+    emitChange(undefined, true);
   },
 
   // ---------------- Tasks ----------------

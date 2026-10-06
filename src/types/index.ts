@@ -1,3 +1,5 @@
+import type { OrganizationEvent } from '../lib/organizationHistory.js';
+import type { ProjectRetrospective } from '../lib/organizationLearning.js';
 export type Priority = 'P0' | 'P1' | 'P2' | 'P3' | 'P4';
 
 export interface Assignee {
@@ -38,6 +40,7 @@ export interface Task {
   columnId: string;
   priority: Priority;
   assignees: Assignee[];
+  reviewers?: Assignee[];
   creator?: Assignee;
   activity?: TaskActivity[];
   githubIssueNumber?: number;
@@ -71,6 +74,8 @@ export interface Column {
 export type ProjectVisibility = 'public' | 'private';
 
 export interface Project {
+  organizationHistory?: OrganizationEvent[];
+  retrospective?: ProjectRetrospective;
   id: string;
   name: string;
   description?: string;
@@ -132,6 +137,9 @@ export interface AuthUser {
 export type Theme =
   | 'dark'
   | 'light'
+  | 'sand'
+  | 'mint'
+  | 'lavender'
   | 'slate'
   | 'midnight'
   | 'zinc'
