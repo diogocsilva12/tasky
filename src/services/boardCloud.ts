@@ -8,6 +8,7 @@ interface SyncOptions {
   status: (state: CloudStatus) => void;
   base?: BoardData;
   saveBase: (data: BoardData) => void;
+  syncIssues?: (data: BoardData) => Promise<BoardData>;
 }
 export class BoardCloud {
   private base: BoardData;
@@ -46,6 +47,21 @@ export class BoardCloud {
       this.base = structuredClone(remote);
       this.options.saveBase(remote);
       this.options.apply(next);
+      if (!discardLocal && this.options.syncIssues) {
+        const snapshot = structuredClone(this.options.getLocal());
+        const issues = await this.options.syncIssues(snapshot);
+        if (this.stopped) return;
+        const merged = mergeBoards(snapshot, this.options.getLocal(), issues);
+        this.options.apply(merged);
+        if (this.dirty()) {
+          const saved = await this.request('PUT', { base: this.base, next: merged });
+          if (this.stopped) return;
+          const current = mergeBoards(merged, this.options.getLocal(), saved);
+          this.base = structuredClone(saved);
+          this.options.saveBase(saved);
+          this.options.apply(current);
+        }
+      }
       this.lastSynced = new Date();
       this.options.status({ syncing: false, error: '', lastSynced: this.lastSynced });
     } catch (error) {

@@ -69,6 +69,11 @@ export function parseBoard(value: unknown): BoardData {
     if (!t || !text(t.id) || !text(t.title) || ids.has(t.id) || !data.projects.some(p => p.id === t.projectId && p.columns.some(c => c.id === t.columnId)) ||
       !['P0', 'P1', 'P2', 'P3', 'P4'].includes(t.priority) || !Array.isArray(t.assignees) || !t.assignees.every(a => a && text(a.username))) throw new Error('Invalid task data.');
     if (t.reviewers !== undefined && (!Array.isArray(t.reviewers) || !t.reviewers.every(a => a && text(a.username)))) throw new Error('Invalid reviewers.');
+    if (t.githubSyncBase !== undefined) {
+      const b = t.githubSyncBase;
+      if (!b || typeof b.title !== 'string' || typeof b.body !== 'string' || !['open', 'closed'].includes(b.state) ||
+        !['P0', 'P1', 'P2', 'P3', 'P4'].includes(b.priority) || !Array.isArray(b.assignees) || !b.assignees.every(text)) throw new Error('Invalid GitHub sync state.');
+    }
     ids.add(t.id);
   }
   return structuredClone({ projects: data.projects, tasks: data.tasks });

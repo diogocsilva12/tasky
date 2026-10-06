@@ -8,7 +8,7 @@ export const SyncStatusButton: React.FC = () => {
   const { sync, status, demo } = useBoardSync();
   const { syncing: isSyncing, lastSynced, error } = status;
   const handleSync = async () => {
-    try { await sync(); toast.success('Shared projects are up to date'); }
+    try { await sync(); toast.success('Shared board and GitHub issues are up to date'); }
     catch { /* The persistent sync banner displays the failure. */ }
   };
   const getRelativeTime = (date: Date) => {
@@ -35,7 +35,7 @@ export const SyncStatusButton: React.FC = () => {
           onClick={handleSync}
           disabled={isSyncing || demo}
           className="h-7 px-2 text-xs gap-1.5 rounded-r-none hover:bg-accent cursor-pointer"
-          title="Sync shared projects"
+          title="Sync shared board and linked GitHub issues"
         >
           <RefreshCw className={`w-3.5 h-3.5 text-primary ${isSyncing ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">Sync</span>

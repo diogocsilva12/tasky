@@ -32,9 +32,9 @@ Live app: https://tasky-silk-two.vercel.app
   - Multi-criteria board search & filter bar (search keyword, priority filter pills, assignee dropdown).
 
 - 🔄 **Bi-directional GitHub Sync**:
-  - Pull issues from GitHub repositories into Kanban tasks.
+  - Pull all open and closed issues (including pagination, excluding pull requests) from linked repositories.
   - Map issue labels (`P0`, `P1`, `priority:p0`) and statuses directly to board columns.
-  - Push tasks to GitHub as repository issues.
+  - Send edits to already-linked issues back to GitHub; local-only tasks remain local.
   - Header sync button with live animated spinning indicator, relative last-synced timestamp, and toast notifications.
 
 - 🎨 **Multi-Theme Engine**:
@@ -127,3 +127,13 @@ Deployment uses `npx vercel --prod`. The Vercel project is currently deployed th
 - **Project → History** records workflow column additions/removals/reordering/renaming, WIP limits, project ownership, access and dates with before/after values and the acting user. It also displays existing task assignment, reviewer and deadline activity. New project history starts when changes are recorded; historical gaps are not backfilled. History travels with the shared project and JSON backups. Deleting a project/task removes its in-app history along with it.
 - **Inbox** shows your assignments, exact `@username` mentions in descriptions/comments, overdue work and deadlines within seven calendar days, and tasks awaiting your review across accessible projects. Explicit **Reviewers** can be selected in the task editor. Review requests appear in Review, QA, Approval or Revisão columns; without explicit reviewers, the assignee receives the review item.
 - Opening an inbox item opens its task and marks that item read. Read status persists per account on this device; assignments, comments, reviewers and history use the shared board sync. Read status does not sync across devices. The retrospective learning model still uses the recorded final review snapshots; the timeline supplies project context without claiming causal learning from changes.
+
+## GitHub issue synchronization
+
+For a project with a repository link, Sync, the initial load, the visible-session one-minute refresh and debounced edits now synchronize GitHub issues as well as the shared board. The signed-in GitHub token needs access to that repository (Issues read/write for fine-grained tokens, or `repo` for classic private-repository tokens). Demo mode stays local.
+
+Open issues enter the project's To Do column and closed issues enter Done; existing open tasks retain intermediate columns such as In Progress. Issue IDs are scoped to the project. Priority labels map to P0–P4, and updates preserve other GitHub labels. Local comments, subtasks and other board-only fields remain on the task.
+
+The first import reads GitHub's fields and records a shared baseline. Later edits to title, description, priority, assignees or completion status synchronize both ways. Independent field changes merge; conflicting edits to the same field stop with a visible error and preserve local edits. Deleting a board card does not delete or close its GitHub issue: use Done to close it. Local-only cards are not automatically published; link an existing issue using its number to synchronize it. New issues created on GitHub are imported automatically.
+
+Sync is successful only after the issues have been synchronized and saved to shared storage. Access, network and conflict failures appear in the persistent sync banner. GitHub Projects V2 fields and issue comments are outside this issue-sync flow.

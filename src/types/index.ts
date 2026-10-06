@@ -44,6 +44,7 @@ export interface Task {
   creator?: Assignee;
   activity?: TaskActivity[];
   githubIssueNumber?: number;
+  githubSyncBase?: { title: string; body: string; state: 'open' | 'closed'; assignees: string[]; priority: Priority };
   githubPrNumber?: number;
   prStatus?: PrStatus;
   milestone?: string;

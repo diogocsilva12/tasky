@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useAuth } from './AuthContext';
 import { getToken } from '../services/githubAuth';
 import { BoardCloud, type CloudStatus } from '../services/boardCloud';
+import { GithubSyncEngine } from '../services/githubSync';
 import { boardStore } from '../store/boardStore';
 import { emptyBoard, parseBoard } from '../lib/boardSync';
 
@@ -21,6 +22,7 @@ export function BoardSyncProvider({ children }: { children: ReactNode }) {
     try { const saved = localStorage.getItem(key); if (saved) base = parseBoard(JSON.parse(saved)); } catch { /* Keep local edits available. */ }
     const engine = new BoardCloud({
       token: getToken() || '', base,
+      syncIssues: data => new GithubSyncEngine(getToken() || '').syncBoard(data),
       getLocal: () => { const { projects, tasks } = boardStore.getState(); return { projects, tasks }; },
       apply: data => boardStore.replaceBoard(data), status: setStatus,
       saveBase: data => { try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* Local storage can be disabled. */ } },
