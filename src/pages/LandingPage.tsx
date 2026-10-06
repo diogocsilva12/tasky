@@ -1,3 +1,4 @@
+import { OrganizationLearning } from '../components/analytics/OrganizationLearning';
 import React from 'react';
 import { KPICards } from '../components/analytics/KPICards';
 import { AnalyticsCharts } from '../components/analytics/Charts';
@@ -45,6 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToBoard }) =
       </div>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
+        <OrganizationLearning projects={displayProjects} tasks={displayTasks} />
         <section>
           <ExecutiveResume
             tasks={displayTasks}

@@ -1,3 +1,5 @@
+import { restoreSession, rememberSession, forgetSession } from '../services/rememberedSession';
+import { toast } from 'sonner';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { GitHubUser, getToken, setToken as setLocalToken, clearToken, validateToken } from '../services/githubAuth';
 import { PassListEntry, AccessRequest, fetchGistData, updateGistData, submitAccessRequest, PASSLIST_GIST_ID } from '../services/gistPasslist';
@@ -7,7 +9,7 @@ type AuthState = 'loading' | 'unauthenticated' | 'pending' | 'approved' | 'admin
 interface AuthContextType {
   user: GitHubUser | null;
   authState: AuthState;
-  loginWithToken: (token: string) => Promise<void>;
+  loginWithToken: (token: string, remember?: boolean) => Promise<void>;
   logout: () => void;
   loginDemo: (role: 'admin' | 'member') => Promise<void>;
   requestAccess: (note: string) => Promise<void>;
@@ -31,8 +33,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const gistId = user && !user.isDemo ? PASSLIST_GIST_ID : null;
 
   useEffect(() => {
+    let cancelled = false;
     const initAuth = async () => {
-      const token = getToken();
+      let token = getToken();
+      if (!token) {
+        try { token = await restoreSession(); if (cancelled) return; if (token) setLocalToken(token); }
+        catch { /* The login form remains available when session restoration is offline. */ }
+      }
+      if (cancelled) return;
       if (token) {
         try {
           // Here we would need to check if it's a demo token in a real app,
@@ -41,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const isDemo = token === 'demo-admin' || token === 'demo-member';
           const role = token === 'demo-admin' ? 'admin' : 'member';
           const validUser = await validateToken(token, isDemo, role);
+          if (cancelled) return;
           setUser(validUser);
           await loadGistData(token, validUser);
         } catch (e) {
@@ -51,7 +60,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAuthState('unauthenticated');
       }
     };
-    initAuth();
+    void initAuth();
+    return () => { cancelled = true; };
   }, []);
 
   const loadGistData = async (token: string, currentUser: GitHubUser) => {
@@ -104,10 +114,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [user]);
 
-  const loginWithToken = async (token: string) => {
+  const loginWithToken = async (token: string, remember = false) => {
     setAuthState('loading');
     try {
       const validUser = await validateToken(token);
+      if (remember) await rememberSession(token);
+      else await forgetSession();
       setLocalToken(token);
       setUser(validUser);
       await loadGistData(token, validUser);
@@ -135,7 +147,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try { if (!user?.isDemo) await forgetSession(); }
+    catch { toast.error('Could not sign out completely. Check your connection and try again.'); return; }
     clearToken();
     setUser(null);
     setAuthState('unauthenticated');

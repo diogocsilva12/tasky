@@ -7,7 +7,6 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import {
   DeviceAuthService,
   DeviceCodeResponse,
@@ -20,7 +19,6 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
-  Settings,
   ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -40,83 +38,55 @@ export const DeviceAuthModal: React.FC<DeviceAuthModalProps> = ({
   const [deviceData, setDeviceData] = useState<DeviceCodeResponse | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [clientId, setClientId] = useState(DeviceAuthService.getClientId());
-  const [proxyUrl, setProxyUrl] = useState(DeviceAuthService.getProxyUrl());
-  const pollingRef = useRef<boolean>(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
-  // Start device flow when modal opens
   useEffect(() => {
-    if (open) {
-      startFlow();
-    } else {
-      pollingRef.current = false;
+    if (open) void startFlow();
+    else {
       setStatus('idle');
       setDeviceData(null);
       setError(null);
     }
+    return () => controllerRef.current?.abort();
   }, [open]);
 
   const startFlow = async () => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
     setError(null);
+    setDeviceData(null);
     setStatus('requesting_code');
-    pollingRef.current = true;
-
     try {
-      const data = await DeviceAuthService.requestDeviceCode(clientId);
+      const data = await DeviceAuthService.requestDeviceCode(controller.signal);
+      if (controller.signal.aborted) return;
       setDeviceData(data);
       setStatus('waiting_for_user');
-
-      // Start polling
-      const token = await DeviceAuthService.pollForToken(
-        data.device_code,
-        data.interval,
-        clientId,
-        () => setStatus('slow_down')
-      );
-
-      if (pollingRef.current) {
-        setStatus('success');
-        toast.success('Successfully authorized via GitHub!');
-        await onSuccess(token);
-        onOpenChange(false);
-      }
-    } catch (err: any) {
-      if (pollingRef.current) {
-        const msg = err.message || '';
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('cors')) {
-          setError(
-            "GitHub's OAuth endpoint does not send CORS headers to static web pages, blocking browser-direct device flow requests. You can either configure a CORS proxy in Settings below or use your GitHub Token directly."
-          );
-        } else {
-          setError(msg || 'GitHub device authorization failed.');
-        }
-        setStatus('error');
-      }
+      const token = await DeviceAuthService.pollForToken(data.device_code, data.interval, data.expires_in, controller.signal, () => setStatus('slow_down'));
+      if (controller.signal.aborted) return;
+      await onSuccess(token);
+      if (controller.signal.aborted) return;
+      setStatus('success');
+      toast.success('Successfully authorized via GitHub!');
+      onOpenChange(false);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const message = error instanceof Error ? error.message : 'GitHub authorization failed.';
+      setError(message === 'Failed to fetch' ? 'Could not connect to Tasky sign-in. Check your connection and try again.' : message);
+      setStatus('error');
     }
   };
 
-  const copyCode = () => {
-    if (deviceData?.user_code) {
-      navigator.clipboard.writeText(deviceData.user_code);
+  const copyCode = async () => {
+    if (!deviceData?.user_code) return;
+    try {
+      await navigator.clipboard.writeText(deviceData.user_code);
       setCopied(true);
       toast.success('Code copied to clipboard!');
       setTimeout(() => setCopied(false), 2500);
+    } catch {
+      toast.error('Copy is unavailable. Select the verification code and copy it manually.');
     }
-  };
-
-  const openGitHub = () => {
-    copyCode();
-    const uri = deviceData?.verification_uri || 'https://github.com/login/device';
-    window.open(uri, '_blank', 'noopener,noreferrer');
-  };
-
-  const saveSettings = () => {
-    DeviceAuthService.setClientId(clientId);
-    DeviceAuthService.setProxyUrl(proxyUrl);
-    setShowSettings(false);
-    toast.success('OAuth settings saved');
-    startFlow();
   };
 
   return (
@@ -168,12 +138,15 @@ export const DeviceAuthModal: React.FC<DeviceAuthModalProps> = ({
             </div>
 
             <div className="space-y-3">
+              <p className="text-xs text-muted-foreground text-center">Open GitHub, enter the code above, then return here after approving Tasky.</p>
               <Button
                 className="w-full h-11 text-base font-semibold gap-2 shadow-md cursor-pointer"
-                onClick={openGitHub}
+                asChild
               >
-                <span>Open GitHub & Confirm Code</span>
-                <ExternalLink className="h-4 w-4" />
+                <a href="https://github.com/login/device" target="_blank" rel="noopener noreferrer">
+                  <span>Open GitHub & Confirm Code</span>
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </Button>
 
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
@@ -187,14 +160,7 @@ export const DeviceAuthModal: React.FC<DeviceAuthModalProps> = ({
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 Direct secure OAuth connection
               </span>
-              <button
-                type="button"
-                onClick={() => setShowSettings(!showSettings)}
-                className="hover:text-foreground flex items-center gap-1 cursor-pointer"
-              >
-                <Settings className="h-3 w-3" />
-                <span>Config</span>
-              </button>
+
             </div>
           </div>
         )}
@@ -213,49 +179,11 @@ export const DeviceAuthModal: React.FC<DeviceAuthModalProps> = ({
               <Button variant="outline" className="flex-1" onClick={startFlow}>
                 Try Again
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setShowSettings(true)}
-                className="gap-1 text-xs"
-              >
-                <Settings className="h-3.5 w-3.5" /> OAuth Settings
-              </Button>
+
             </div>
           </div>
         )}
 
-        {/* OAuth App Settings Modal Drawer */}
-        {showSettings && (
-          <div className="rounded-lg border bg-card p-4 space-y-3 mt-2">
-            <p className="text-xs font-semibold text-foreground">GitHub OAuth App Configuration</p>
-            <div className="space-y-2">
-              <label className="text-[11px] text-muted-foreground">OAuth App Client ID</label>
-              <Input
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder="GitHub OAuth Client ID"
-                className="h-8 text-xs font-mono"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[11px] text-muted-foreground">CORS Proxy URL (Optional)</label>
-              <Input
-                value={proxyUrl}
-                onChange={(e) => setProxyUrl(e.target.value)}
-                placeholder="e.g. https://my-worker.workers.dev"
-                className="h-8 text-xs font-mono"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button size="sm" variant="ghost" onClick={() => setShowSettings(false)}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={saveSettings}>
-                Save & Connect
-              </Button>
-            </div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,8 @@
 # Tasky 📋
 
-Tasky is a minimalist, high-velocity GitHub-integrated Task & Kanban Board application designed for deployment on GitHub Pages. It features client-side authentication, an admin-governed GitHub Gist Pass-List, bi-directional sync with GitHub Projects V2 and Issues, customizable columns with `@dnd-kit`, P0–P4 priority grading, multi-project switching, branch/repo direct navigation, multi-theme customization, and an executive landing resume dashboard.
+Tasky is a GitHub-integrated Task & Kanban Board application deployed on Vercel. It provides shared projects and tasks, server-enforced project permissions, GitHub authentication, an administrator-approved pass-list, customizable workflows, multiple light and dark themes, and project retrospectives.
+
+Live app: https://tasky-silk-two.vercel.app
 
 ---
 
@@ -30,9 +32,9 @@ Tasky is a minimalist, high-velocity GitHub-integrated Task & Kanban Board appli
   - Multi-criteria board search & filter bar (search keyword, priority filter pills, assignee dropdown).
 
 - 🔄 **Bi-directional GitHub Sync**:
-  - Pull issues from GitHub repositories into Kanban tasks.
+  - Pull all open and closed issues (including pagination, excluding pull requests) from linked repositories.
   - Map issue labels (`P0`, `P1`, `priority:p0`) and statuses directly to board columns.
-  - Push tasks to GitHub as repository issues.
+  - Send edits to already-linked issues back to GitHub; local-only tasks remain local.
   - Header sync button with live animated spinning indicator, relative last-synced timestamp, and toast notifications.
 
 - 🎨 **Multi-Theme Engine**:
@@ -102,3 +104,36 @@ npm run build
 
 ## 📄 License
 MIT © Diogo Silva
+
+## Shared workspace on Vercel
+
+`/api/board` authenticates each GitHub token and checks the shared pass-list before reading or changing projects. Storage is the private `diogocsilva12/tasky-data` repository; `TASKY_STORAGE_TOKEN` is a server-only Vercel secret. `TASKY_STORAGE_REPO` can override the repository. Public projects are visible to approved users, and private projects are filtered on the server. Edits autosave after two seconds; other sessions refresh every minute or through Sync. Concurrent edits to the same item produce a conflict instead of silent overwrites.
+
+The GitHub Pages version stores projects in the original browser. To migrate existing work, export its JSON Full Backup and import it using the Vercel app's Import backup action. Fresh real accounts do not receive demo projects. Local backups and demo sessions are isolated by account.
+
+GitHub Device Flow uses `/api/device-auth`, with fixed GitHub endpoints and no external CORS proxy. The native verification link opens GitHub independently of clipboard access.
+
+## Appearance, remembered sessions and project learning
+
+- The palette menu offers four light themes and six dark themes. Form surfaces, inputs and date controls follow the selected theme.
+- Check **Remember me on this device** when signing in to keep a 30-day session. `TASKY_SESSION_SECRET` must be a random 32-byte base64url server secret. The token is encrypted in a Secure, HttpOnly, SameSite=Strict cookie, restored into the current session when needed and removed from the remembered session on sign-out. Demo tokens cannot be remembered.
+- Task assignees can be selected from a searchable list of approved users with project access. Names are inserted with commas and deduplicated.
+- **Executive Dashboard & Resume → Learn from our organization** lets project owners and administrators record a success rating, notes and a snapshot of organization/completion metrics. A small statistical model compares practices across reviewed projects, with smoothing and minimum sample counts. It learns from explicit outcomes; it does not claim causality or invent successful project histories.
+
+Deployment uses `npx vercel --prod`. Vercel also builds GitHub pull request previews. Run `npm test` and `npm run build` before deployment. The build includes a separate NodeNext TypeScript check for API functions.
+
+### Organization history and personal inbox
+
+- **Project → History** records workflow column additions/removals/reordering/renaming, WIP limits, project ownership, access and dates with before/after values and the acting user. It also displays existing task assignment, reviewer and deadline activity. New project history starts when changes are recorded; historical gaps are not backfilled. History travels with the shared project and JSON backups. Deleting a project/task removes its in-app history along with it.
+- **Inbox** shows your assignments, exact `@username` mentions in descriptions/comments, overdue work and deadlines within seven calendar days, and tasks awaiting your review across accessible projects. Explicit **Reviewers** can be selected in the task editor. Review requests appear in Review, QA, Approval or Revisão columns; without explicit reviewers, the assignee receives the review item.
+- Opening an inbox item opens its task and marks that item read. Read status persists per account on this device; assignments, comments, reviewers and history use the shared board sync. Read status does not sync across devices. The retrospective learning model still uses the recorded final review snapshots; the timeline supplies project context without claiming causal learning from changes.
+
+## GitHub issue synchronization
+
+For a project with a repository link, Sync, the initial load, the visible-session one-minute refresh and debounced edits now synchronize GitHub issues as well as the shared board. The signed-in GitHub token needs access to that repository (Issues read/write for fine-grained tokens, or `repo` for classic private-repository tokens). Demo mode stays local.
+
+Open issues enter the project's To Do column and closed issues enter Done; existing open tasks retain intermediate columns such as In Progress. Issue IDs are scoped to the project. Priority labels map to P0–P4, and updates preserve other GitHub labels. Local comments, subtasks and other board-only fields remain on the task.
+
+The first import reads GitHub's fields and records a shared baseline. Later edits to title, description, priority, assignees or completion status synchronize both ways. Independent field changes merge; conflicting edits to the same field stop with a visible error and preserve local edits. Deleting a board card does not delete or close its GitHub issue: use Done to close it. Local-only cards are not automatically published; link an existing issue using its number to synchronize it. New issues created on GitHub are imported automatically.
+
+Sync is successful only after the issues have been synchronized and saved to shared storage. Access, network and conflict failures appear in the persistent sync banner. GitHub Projects V2 fields and issue comments are outside this issue-sync flow.

@@ -7,7 +7,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useBoardStore } from '@/store/boardStore';
+import { boardStore, useBoardStore } from '@/store/boardStore';
+import { parseBoard } from '@/lib/boardSync';
+import { useBoardSync } from '@/context/BoardSyncContext';
 import { useAuth } from '@/context/AuthContext';
 import { getAccessibleProjects } from '@/lib/projectAccess';
 import type { Task } from '@/types';
@@ -31,6 +33,8 @@ type ExportTab = 'json' | 'csv' | 'markdown';
 export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) => {
   const [activeTab, setActiveTab] = useState<ExportTab>('markdown');
   const [copied, setCopied] = useState(false);
+  const [importMessage, setImportMessage] = useState('');
+  const { sync } = useBoardSync();
 
   const { tasks, projects, activeProject } = useBoardStore();
   const { user } = useAuth();
@@ -263,6 +267,27 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
             <FileJson className="h-3.5 w-3.5" />
             <span>JSON Full Backup</span>
           </button>
+        </div>
+
+        <div className="rounded-lg border p-3 space-y-2">
+          <label htmlFor="board-backup" className="text-sm font-medium">Import projects from a Tasky JSON backup</label>
+          <p className="text-xs text-muted-foreground">On the old Tasky site, choose Export → JSON Full Backup. Import that file here once to share your existing projects.</p>
+          <input id="board-backup" type="file" accept=".json,application/json" className="text-xs w-full" onChange={async event => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+              if (file.size > 700_000) throw new Error('Backup is too large.');
+              const imported = parseBoard(JSON.parse(await file.text()));
+              const current = boardStore.getState();
+              const duplicate = imported.projects.some(p => current.projects.some(existing => existing.id === p.id)) || imported.tasks.some(t => current.tasks.some(existing => existing.id === t.id));
+              if (duplicate) throw new Error('This backup contains projects or tasks already present. Import stopped to protect existing edits.');
+              boardStore.replaceBoard({ projects: [...current.projects, ...imported.projects.map(p => ({ ...p, owner: user?.role === 'super-admin' ? p.owner || user.username : user?.username }))], tasks: [...current.tasks, ...imported.tasks] });
+              await sync();
+              setImportMessage('Projects imported and shared successfully.');
+            } catch (error) { setImportMessage(error instanceof Error ? error.message : 'Import failed.'); }
+            event.target.value = '';
+          }} />
+          {importMessage && <p role="status" className="text-xs">{importMessage}</p>}
         </div>
 
         {/* Tab Content */}
